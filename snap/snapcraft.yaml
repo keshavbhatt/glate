@@ -60,6 +60,5 @@ parts:
      source: snap_launcher/
      override-build: |
             snapcraftctl build
-            mkdir ${SNAPCRAFT_PART_INSTALL}/usr/share/applications/
             sed -i 's|Icon=.*|Icon=${SNAP}/meta/gui/icon.png|g' ${SNAPCRAFT_PART_SRC}/glate.desktop
             cp -rf ${SNAPCRAFT_PART_SRC}/glate.desktop ${SNAPCRAFT_PART_INSTALL}/usr/share/applications/glate.desktop
