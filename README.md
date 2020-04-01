@@ -49,7 +49,7 @@ Via command line app can be simply installed with following command:
 <hr>
 
 ## Credits :
-[Alan Pope](https://github.com/popey) of [Canonical]([https://github.com/canonical](https://github.com/canonical)) helped me deciding the name for this Application.
+[Alan Pope](https://github.com/popey) of [Canonical](https://github.com/canonical) helped me deciding the name for this Application.
 
 
 
