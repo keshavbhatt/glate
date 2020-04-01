@@ -1,3 +1,4 @@
+
 # Glate - Google Translator and Text To Speech Service on Linux Desktop
 Website for "The Glate App" - The Google translator and TTS app for Desktop Linux.
 <p align="center">
@@ -30,11 +31,9 @@ Galte is a neat, simple yet feature rich, Google Translator and Text to speech s
 
 ## Preview 
 
-<iframe width="560" height="315"
-src="https://www.youtube.com/watch?v=FxTDqcIgk7g" 
-frameborder="0" 
-allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" 
-allowfullscreen></iframe>
+[![Glate - Google translator and text to speech Application for Linux Desktop](https://github.com/keshavbhatt/glate/blob/master/screenshots/preview.jpg?raw=true)](https://www.youtube.com/watch?v=FxTDqcIgk7g 
+"Glate - Google translator and text to speech Application for Linux Desktop")
+
 
 ## Install on Linux via snap-store here :
 Glate can be installed on all Linux Desktop supporting snapd
@@ -47,5 +46,6 @@ Via command line app can be simply installed with following command:
 <hr>
  Version for Windows coming soon... Stay tuned for updates :)
 <hr>
+
 
 
