@@ -28,6 +28,14 @@ Galte is a neat, simple yet feature rich, Google Translator and Text to speech s
 
 ![Glate Share Dialog on right](https://github.com/keshavbhatt/glate/blob/master/screenshots/3.jpg?raw=true)
 
+## Preview 
+
+<iframe width="560" height="315"
+src="https://www.youtube.com/watch?v=FxTDqcIgk7g" 
+frameborder="0" 
+allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" 
+allowfullscreen></iframe>
+
 ## Install on Linux via snap-store here :
 Glate can be installed on all Linux Desktop supporting snapd
 Via command line app can be simply installed with following command:
