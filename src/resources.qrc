@@ -1,0 +1,6 @@
+<RCC>
+    <qresource prefix="/">
+        <file>resources/lang.glate</file>
+        <file>resources/tts.glate</file>
+    </qresource>
+</RCC>
