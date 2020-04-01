@@ -1,4 +1,5 @@
 
+
 # Glate - Google Translator and Text To Speech Service on Linux Desktop
 Website for "The Glate App" - The Google translator and TTS app for Desktop Linux.
 <p align="center">
@@ -46,6 +47,9 @@ Via command line app can be simply installed with following command:
 <hr>
  Version for Windows coming soon... Stay tuned for updates :)
 <hr>
+
+## Credits :
+[Alan Pope](https://github.com/popey) of [Canonical]([https://github.com/canonical](https://github.com/canonical)) helped me deciding the name for this Application.
 
 
 
