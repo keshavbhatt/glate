@@ -12,14 +12,16 @@ Galte is a neat, simple yet feature rich, Google Translator and Text to speech s
 
 -   Set the preferred source and target language
 -   Translate between over 104 languages
+-   Line by Line translation
+-   Download synthesized speech in mp3 format
+-   Read Selected text wit Text to speech Engine
 -   History of text translation for reference
 -   Export translated History in text(.txt) format
 -   Translation share option with inbuilt pastebin generator
 -   HOTKEY to translate text from any website or other Application
 -   Listen to the pronunciation, Text to Speech
--   Download synthesized speech
 -   Dark and Light mode
--   Copy and paste the translated text.
+-   Copy and paste the translated text
 -   Glate will bring many more exciting features in near future, spread the name and the app with your friends, family and colleagues.
 
 ## Screenshot :
