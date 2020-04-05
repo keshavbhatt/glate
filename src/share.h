@@ -4,6 +4,7 @@
 #include <QWidget>
 #include <QSettings>
 #include <QProcess>
+#include "translationdownloader.h"
 
 namespace Ui {
 class Share;
@@ -18,7 +19,7 @@ public:
     ~Share();
 
 public slots:
-    void setTranslation(QString translation);
+    void setTranslation(QString translation, QString uuid);
 private slots:
     void on_twitter_clicked();
 
@@ -33,11 +34,20 @@ private slots:
     void on_pastebin_clicked();
     bool saveFile(QString filename);
     void pastebin_it_facebook_finished(int k);
+    void on_download_clicked();
+
+    void ffmpeg_finished(int k);
+    void concat(QString currentDownloadDir);
+
 private:
     Ui::Share *ui;
     QSettings settings;
+    QProcess * ffmpeg = nullptr;
     QProcess * pastebin_it = nullptr;
     QProcess * pastebin_it_facebook = nullptr;
+    QString translationUUID;
+    TranslationDownloader * td = nullptr;
+    QString cacheDirToDelete;
 };
 
 #endif // SHARE_H

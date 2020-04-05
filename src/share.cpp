@@ -10,6 +10,7 @@
 #include <QPropertyAnimation>
 #include <QDateTime>
 #include <QTimer>
+#include <QUrlQuery>
 
 #include "utils.h"
 
@@ -18,15 +19,17 @@ Share::Share(QWidget *parent) :
     ui(new Ui::Share)
 {
     ui->setupUi(this);
+    ffmpeg=new QProcess(this);
     pastebin_it=new QProcess(this);
     pastebin_it_facebook=new QProcess(this);
     connect(this->pastebin_it,SIGNAL(finished(int)),this,SLOT(pastebin_it_finished(int)));
     connect(this->pastebin_it_facebook,SIGNAL(finished(int)),this,SLOT(pastebin_it_facebook_finished(int)));
-
+    connect(this->ffmpeg,SIGNAL(finished(int)),this,SLOT(ffmpeg_finished(int)));
 }
 
-void Share::setTranslation(QString translation){
+void Share::setTranslation(QString translation,QString uuid){
     ui->translation->setPlainText(translation);
+    translationUUID = uuid;
 }
 
 Share::~Share()
@@ -106,7 +109,7 @@ void Share::on_email_clicked()
 void Share::on_pastebin_clicked()
 {
     QString encoded = QUrl(ui->translation->toPlainText()).toString(QUrl::FullyEncoded);
-    QString o = "wget -O - --post-data=\"""sprunge="+encoded+"\" http://sprunge.us";
+    QString o = "wget -O - --post-data=\"""sprunge="+ui->translation->toPlainText().toHtmlEscaped()+"\" http://sprunge.us";
     pastebin_it->start("bash", QStringList()<<"-c"<< o);
     showStatus("<span style='color:red'>Share: </span>Prepearing facebook share please wait...");
     ui->pastebin->setDisabled(true);
@@ -148,7 +151,7 @@ void Share::pastebin_it_finished(int k)
         showStatus("<span style='color:green'>Share: </span>Pastebin link - <a target='_blank' href='"+url+"'>"+url+"</a>");
         ui->pastebin->setDisabled(false);
     }
-    else if(k==1){
+    else{
          showStatus("<span style='color:red'>"+pastebin_it->readAllStandardError()+"</span><br>");
          ui->pastebin->setDisabled(false);
     }
@@ -165,7 +168,7 @@ void Share::pastebin_it_facebook_finished(int k)
             showStatus("<span style='color:red'>Share: </span>unable to open a web-browser...");
         }
     }
-    else if(k==1){
+    else {
          showStatus("<span style='color:red'>"+pastebin_it_facebook->readAllStandardError()+"</span><br>");
          ui->facebook->setDisabled(false);
     }
@@ -185,3 +188,106 @@ void Share::showStatus(QString message)
     ui->status->show();
 }
 
+
+void Share::on_download_clicked()
+{
+
+    //create a dir with uuid to track process,
+    //start donwload manager with tasks,
+    //wait for tasks to finish,
+    //concat downloaded results,
+    //ask user to save file,
+    //destroy uuid and file on close.
+
+    QString text = ui->translation->toPlainText();
+    QStringList src1Parts;
+    QList<QUrl> urls;
+    if(utils::splitString(text,1400,src1Parts)){
+        qDebug()<<src1Parts;
+        for (int i= 0;i<src1Parts.count();i++) {
+            QUrl url("https://www.google.com/speech-api/v1/synthesize");
+            QUrlQuery params;
+            params.addQueryItem("ie","UTF-8");
+            params.addQueryItem("lang","hi");
+            params.addQueryItem("text",QUrl::toPercentEncoding(src1Parts.at(i).toUtf8()));
+            url.setQuery(params);
+            urls.append(url);
+        }
+    }
+
+    if(td!=nullptr){
+        td->disconnect();
+        td->deleteLater();
+        td = nullptr;
+    }else{
+        td = new TranslationDownloader(this,urls,translationUUID);
+        ui->download->setEnabled(false);
+        connect(td,&TranslationDownloader::downloadComplete,[=](){
+           qDebug()<<"DOWNLOAD FINISHED";
+           showStatus("Voice download finished...");
+           showStatus("Prepearing output file...");
+           concat(td->currentDownloadDir);
+           td->deleteLater();
+           td = nullptr;
+        });
+        connect(td,&TranslationDownloader::downloadStarted,[=](QString status){
+           showStatus(status);
+        });
+        connect(td,&TranslationDownloader::downloadError,[=](QString status){
+           showStatus(status);
+           ui->download->setEnabled(true);
+        });
+        connect(td,&TranslationDownloader::downloadFinished,[=](QString status){
+           showStatus(status);
+        });
+        td->start();
+    }
+}
+
+void Share::concat(QString currentDownloadDir){
+    //get path
+    QString translation = ui->translation->toPlainText();
+    QString path = settings.value("sharePathAudio",QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation)).toString();
+    QString fileName = QFileDialog::getSaveFileName(this, tr("Save Audio File"), path+"/"+getFileNameFromString(translation)+".mp3", tr("Audio Files (*.mp3)"));
+    if (!fileName.isEmpty())
+    {
+
+        QStringList args;
+        QString complex;
+        args<<"-v"<<"quiet"<<"-stats";
+        QDir transDir(currentDownloadDir);
+        cacheDirToDelete = currentDownloadDir; //save audio cahce dir for deletion after concat
+        transDir.setFilter(QDir::Files);
+        transDir.setSorting(QDir::Name);
+        QFileInfoList infoList = transDir.entryInfoList();
+        for (int i= 0;i<infoList.count();i++) {
+            args<<"-i"<<infoList.at(i).filePath();
+            complex += "["+QString::number(i)+":0]";
+        }
+        complex += "concat=n="+QString::number(infoList.count())+":v=0:a=1[out]";
+        args<<"-filter_complex"<<complex<<"-map"<<"[out]"<<fileName<<"-y";
+        //ffmpeg -v quiet -stats inputs -filter_complex '[0:0][1:0]concat=n=2:v=0:a=1[out]' -map '[out]' /tmp/output.mp3
+        ffmpeg->start("ffmpeg", args);
+
+        ui->download->setEnabled(!ffmpeg->waitForStarted());
+        //save last used location
+        showStatus("<span style='color:green'>Share: </span>concating parts...");
+        settings.setValue("sharePathAudio",QFileInfo(fileName).path());
+    }else {
+        showStatus("<span style='color:red'>Share: </span>file save operation cancelled.");
+    }
+}
+
+void Share::ffmpeg_finished(int k)
+{
+    if(k==0){
+        QString output = ffmpeg->readAll();
+        showStatus("<span style='color:green'>Share: </span>export finished.\n"+output);
+        QDir d(cacheDirToDelete);
+        d.removeRecursively();
+    }
+    else {
+         showStatus("<span style='color:red'>"+ffmpeg->readAllStandardError()+"</span><br>");
+    }
+    ui->download->setDisabled(false);
+}
