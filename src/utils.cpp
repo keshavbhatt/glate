@@ -138,3 +138,43 @@ QString utils::htmlToPlainText(QString str){
             .replace("&#39;","'");
 }
 
+//bool utils::splitString(const QString &str, int n, QStringList &list)
+//{
+//    if (n < 1)
+//        return false;
+//    QString tmp(str);
+//    list.clear();
+//    while (!tmp.isEmpty()) {
+//        int m = get_n(tmp,n);
+////        list.append(tmp.left(n));
+////        tmp.remove(0, n);
+//        list.append(tmp.left(m));
+//        tmp.remove(0, m);
+//    }
+//    return true;
+//}
+
+bool utils::splitString(const QString &str, int m, QStringList &list){
+    if (m < 1)
+     return false;
+    QStringList words = str.split(" ");
+     while(words.isEmpty()==false){
+        QString strPart;
+        if(QString(words.join(" ")).length()>m){
+            for (int i = 0; i < words.count(); i++) {
+                if(strPart.count()<m){
+                    strPart.append(words.at(i)+" ");
+                    words.removeAt(i);
+                    --i;
+                }
+            }
+        }else if(QString(words.join(" ")).length()<m){
+                 strPart.append(words.join(" "));
+                 words.clear();
+        }
+        list.append(strPart);
+     }
+     return true;
+}
+
+

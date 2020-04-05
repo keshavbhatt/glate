@@ -16,6 +16,7 @@ public:
     utils(QObject* parent=0);
     virtual ~utils();
 public slots:
+    static bool splitString(const QString &str, int m, QStringList &list);
     static QString refreshCacheSize(const QString cache_dir);
     bool delete_cache(const QString cache_dir);
     QString toCamelCase(const QString &s);
@@ -75,8 +76,6 @@ public slots:
 private slots:
     //use refreshCacheSize
     static quint64 dir_size(const QString &directory);
-
-
 
 };
 
