@@ -116,6 +116,9 @@ MainWindow::MainWindow(QWidget *parent) :
         Q_UNUSED(error);
         playSelected = false;
         selectedText.clear();
+        QPushButton *playBtn = this->findChild<QPushButton*>(_player->objectName().split("_").last());
+        if(playBtn != nullptr )
+        playBtn->setIcon(QIcon(":/icons/volume-up-line.png"));
         showError(_player->errorString());
     });
 
@@ -138,9 +141,6 @@ MainWindow::MainWindow(QWidget *parent) :
 
     ui->counter->setMinimumWidth(minWid);
     ui->counter_2->setMinimumWidth(minWid);
-    ui->src1->setPlainText(QString(settings.value("src1").toByteArray()));
-
-    ui->src2->setPlainText(QString(settings.value("src2").toByteArray()));
 
     clipboard = QApplication::clipboard();
 
@@ -150,12 +150,28 @@ MainWindow::MainWindow(QWidget *parent) :
     _share->setWindowFlag(Qt::Dialog);
     _share->setWindowModality(Qt::NonModal);
 
+
+    _lineByLine = new LineByLine(this,clipboard);
+    _lineByLine->setWindowTitle(QApplication::applicationName()+" | LineByLine translation");
+    _lineByLine->setWindowFlag(Qt::Dialog);
+    _lineByLine->setWindowModality(Qt::NonModal);
+
     //init settings
     init_settings();
 
     //init history
     init_history();
+
+    if(settings.value("lastTranslation").isValid()){
+        QFileInfo check(QFile(utils::returnPath("history")+"/"+settings.value("lastTranslation").toString()+".json"));
+        if(check.exists()){
+            translationId = settings.value("lastTranslation").toString();
+            historyWidget->loadHistoryItem(utils::returnPath("history")+"/"+translationId+".json");
+        }
+    }
 }
+
+//TODO skip duplicate history item by checking translationId
 
 void MainWindow::init_history()
 {
@@ -164,7 +180,26 @@ void MainWindow::init_history()
     historyWidget->setWindowTitle(QApplication::applicationName()+" | History");
     historyWidget->setWindowFlag(Qt::Dialog);
     historyWidget->setWindowModality(Qt::NonModal);
+    connect(historyWidget,&History::setTranslationId,[=](QString transId){
+        this->translationId = transId;
+    });
+    connect(historyWidget,&History::historyItemMeta,[=](QStringList historyItemMeta){
+        if(historyItemMeta.count()>=4){
+            currentTranslationData.clear();
+            settings.setValue("lastTranslation",translationId); //translation id is set before this functor is called via signal
+            QString from, to, src1, src2;
+            from = historyItemMeta.at(0);
+            to   = historyItemMeta.at(1);
+            src1 = historyItemMeta.at(2);
+            src2 = historyItemMeta.at(3);
+            ui->src1->setText(src1);
+            ui->src2->setText(src2);
+            ui->lang1->setCurrentText(from);
+            ui->lang2->setCurrentText(to);
+        }
+    });
 }
+
 
 void MainWindow::init_settings()
 {
@@ -218,12 +253,12 @@ void MainWindow::textSelectionChanged(QTextEdit *editor)
         connect(textOptionForm.readPushButton,&QPushButton::clicked,[=](){
             if(this->findChild<QTextEdit*>(textOptionWidget->objectName().split("selection_").last().trimmed())!= nullptr){
                 playSelected = true;
+                selectedText = selection;
                 if(textOptionWidget->objectName().split("selection_").last().trimmed()=="src1"){
                     on_play1_clicked();
                 }else{
                     on_play2_clicked();
                 }
-                selectedText = selection;
                 textOptionWidget->hide();
             }
         });
@@ -347,8 +382,12 @@ void MainWindow::translate_clicked()
         });
         connect(_request,&Request::requestFinished,[=](QString reply)
         {
+            //save cache for line by line use
+            saveByTransId(translationId,reply);
+            //load to view
             processTranslation(reply);
             _loader->stop();
+            settings.setValue("lastTranslation",translationId);
         });
         connect(_request,&Request::downloadError,[=](QString errorString)
         {
@@ -365,11 +404,20 @@ void MainWindow::translate_clicked()
             showError("Invalid Input.");
         }else{
             _request->get(QUrl(url));
+            translationId = utils::generateRandomId(20);
         }
     }   
 }
 
+void MainWindow::saveByTransId(QString translationId,QString reply){
+    QFile jsonFile(utils::returnPath("cache")+"/"+translationId+".glate");
+    jsonFile.open(QFile::WriteOnly);
+    jsonFile.write(reply.toUtf8());
+    jsonFile.close();
+}
+
 void MainWindow::processTranslation(QString reply){
+    currentTranslationData.clear();
     QJsonDocument jsonResponse = QJsonDocument::fromJson(reply.toUtf8());
     if(jsonResponse.isEmpty()){
         showError("Empty response returned.\n Please report to keshavnrj@gmail.com");
@@ -394,11 +442,11 @@ void MainWindow::processTranslation(QString reply){
     //scroll to top
     ui->src2->verticalScrollBar()->triggerAction(QScrollBar::SliderToMinimum);
     //history save
-    historyWidget->insertItem(QStringList()<<getSourceLang()<<getTransLang()
+    historyWidget->insertItem(QStringList()<<getLangName(getSourceLang())<<getLangName(getTransLang())
                               <<ui->src1->toPlainText()
                               <<ui->src2->toPlainText()
                               <<QDateTime::currentDateTime().toLocalTime().toString()
-                              ,false);
+                              ,false,translationId);
 }
 
 QString MainWindow::getSourceLang()
@@ -445,6 +493,8 @@ void MainWindow::on_clear_clicked()
         _loader->stop();
     }
     currentTranslationData.clear();
+    translationId.clear();
+    _lineByLine->clearData();
 }
 
 void MainWindow::on_paste_clicked()
@@ -483,7 +533,6 @@ void MainWindow::on_lang2_currentIndexChanged(int index)
 {
     settings.setValue("lang2",index);
     _translate->setToolTip("Translate from "+ui->lang1->itemText(ui->lang1->currentIndex())+" to "+ui->lang2->itemText(index));
-
 }
 
 void MainWindow::on_play2_clicked()
@@ -497,19 +546,26 @@ void MainWindow::on_play2_clicked()
             return;
         }
         _player->setObjectName("player_play2");
-        QString text = ui->src2->toPlainText().toHtmlEscaped();
+        QString text = ui->src2->toPlainText();
+        if(playSelected) text = selectedText;
+
         QStringList src2Parts;
         QMediaPlaylist * src2playlist = new QMediaPlaylist(_player);
         src2playlist->setPlaybackMode(QMediaPlaylist::Sequential);
         connect(src2playlist,&QMediaPlaylist::currentIndexChanged,[=](int pos){
            qDebug()<<"Playist for player2 pos changed"<<pos;
         });
-        if(splitString(text,1600,src2Parts)){
+        if(utils::splitString(text,1500,src2Parts)){
             foreach (QString src2Url, src2Parts) {
-                src2playlist->addMedia(QMediaContent(QUrl("https://www.google.com/speech-api/v1/synthesize?ie=UTF-8&text="+src2Url+"&lang="+getTransLang())));
+                QUrl url("https://www.google.com/speech-api/v1/synthesize");
+                QUrlQuery params;
+                params.addQueryItem("ie","UTF-8");
+                params.addQueryItem("lang",getTransLang());
+                params.addQueryItem("text",QUrl::toPercentEncoding(src2Url.toUtf8()));
+                url.setQuery(params);
+                src2playlist->addMedia(QMediaContent(url));
             }
         }
-        if(playSelected) text = selectedText;
         _player->setPlaylist(src2playlist);
         _player->play();
         ui->play2->setIcon(QIcon(":/icons/loader-2-fill.png"));
@@ -538,19 +594,25 @@ void MainWindow::on_play1_clicked()
             return;
         }
         _player->setObjectName("player_play1");
-        QString text = ui->src1->toPlainText().toHtmlEscaped();
+        QString text = ui->src1->toPlainText();
+        if(playSelected) text = selectedText;
+
         QStringList src1Parts;
         QMediaPlaylist * src1playlist = new QMediaPlaylist(_player);
         src1playlist->setPlaybackMode(QMediaPlaylist::Sequential);
         connect(src1playlist,&QMediaPlaylist::currentIndexChanged,[=](int pos){
            qDebug()<<"Playist for player1 pos changed"<<pos;
         });
-        if(splitString(text,1600,src1Parts)){
+        if(utils::splitString(text,1500,src1Parts)){
             foreach (QString src1Url, src1Parts) {
-                src1playlist->addMedia(QMediaContent(QUrl("https://www.google.com/speech-api/v1/synthesize?ie=UTF-8&text="+src1Url+"&lang="+getSourceLang())));
-            }
+                QUrl url("https://www.google.com/speech-api/v1/synthesize");
+                QUrlQuery params;
+                params.addQueryItem("ie","UTF-8");
+                params.addQueryItem("lang",getSourceLang());
+                params.addQueryItem("text",QUrl::toPercentEncoding(src1Url.toUtf8()));
+                url.setQuery(params);
+                src1playlist->addMedia(QMediaContent(url));            }
         }
-        if(playSelected) text = selectedText;
         _player->setPlaylist(src1playlist);
         _player->play();
         ui->play1->setIcon(QIcon(":/icons/loader-2-fill.png"));
@@ -568,22 +630,9 @@ void MainWindow::on_play1_clicked()
     }
 }
 
-bool MainWindow::splitString(const QString &str, int n, QStringList &list)
-{
-    if (n < 1)
-        return false;
-    QString tmp(str);
-    list.clear();
-    while (!tmp.isEmpty()) {
-        list.append(tmp.left(n));
-        tmp.remove(0, n);
-    }
-    return true;
-}
 
 void MainWindow::on_src1_textChanged()
 {
-    settings.setValue("src1",ui->src1->toPlainText().toUtf8());
     ui->counter->setText(QString::number(ui->src1->toPlainText().count())+"/5000");
     if(ui->src1->toPlainText().count()>5000){
         int diff = ui->src1->toPlainText().length() - 5000;
@@ -599,7 +648,6 @@ void MainWindow::on_src1_textChanged()
 
 void MainWindow::on_src2_textChanged()
 {
-    settings.setValue("src2",ui->src2->toPlainText().toUtf8());
     //enable disable play button if text is not empty
     ui->play2->setEnabled(!ui->src2->toPlainText().isEmpty());
 }
@@ -614,7 +662,7 @@ void MainWindow::on_copy_clicked()
 
 void MainWindow::on_share_clicked()
 {
-    _share->setTranslation(ui->src2->toPlainText());
+    _share->setTranslation(ui->src2->toPlainText(),translationId);
     if(_share->isVisible()==false){
         _share->showNormal();
     }
@@ -639,5 +687,58 @@ void MainWindow::on_history_clicked()
         QRect availableScreenSize = pScreen->availableGeometry();
         historyWidget->move(availableScreenSize.center()-historyWidget->rect().center());
         historyWidget->showNormal();
+    }
+}
+
+void MainWindow::on_lineByline_clicked()
+{
+    if(translationId.isEmpty()){
+        showError("Translate something first.");
+        return;
+    }
+    if(_lineByLine->isVisible()==false){
+        if(translationId != _lineByLine->getTId()){
+            _lineByLine->clearData();
+            if(currentTranslationData.isEmpty()==false){
+                _lineByLine->setData(currentTranslationData,getLangName(getSourceLang())
+                                     ,getLangName(getTransLang()),translationId);
+            }else{
+                //load translation from cache;
+                QFile jsonFile(utils::returnPath("cache")+"/"+translationId+".glate");
+                jsonFile.open(QFile::ReadOnly);
+                currentTranslationData.clear();
+                processTranslation(jsonFile.readAll());
+                _lineByLine->setData(currentTranslationData,getLangName(getSourceLang())
+                                     ,getLangName(getTransLang()),translationId);
+            }
+        }
+        QScreen* pScreen = QGuiApplication::screenAt(this->mapToGlobal({_lineByLine->width()/2,0}));
+        QRect availableScreenSize = pScreen->availableGeometry();
+        _lineByLine->move(availableScreenSize.center()-_lineByLine->rect().center());
+        _lineByLine->showNormal();
+    }
+}
+
+// convert lang code to lang name.
+QString MainWindow::getLangName(QString langCode){
+    if(langCode == "auto" ){
+        return "Auto Detected";
+    }else{
+        QStringList langNameList = _langName;
+        langNameList.removeAt(0);//remove auto detect
+        QString langName = langNameList.at(_langCode.lastIndexOf(langCode)-1);
+        return langName;
+    }
+}
+
+
+//not tested not being used yet
+QString MainWindow::getLangCode(QString langName){
+    if(langName.contains("auto",Qt::CaseInsensitive)){
+        return "auto";
+    }else{
+        QStringList langCodeList = _langCode;
+        QString langCode = langCodeList.at(_langName.lastIndexOf(langName)-1);
+        return langCode;
     }
 }

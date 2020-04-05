@@ -20,6 +20,7 @@
 #include "ui_textoptionform.h"
 #include "controlbutton.h"
 #include "utils.h"
+#include "linebyline.h"
 
 
 namespace Ui {
@@ -79,10 +80,14 @@ private slots:
     void init_textOptionWidget();
 
     void textSelectionChanged(QTextEdit *editor);
-    bool splitString(const QString &str, int n, QStringList &list);
     void on_history_clicked();
 
     void init_history();
+    void on_lineByline_clicked();
+
+    QString getLangName(QString langCode);
+    QString getLangCode(QString langName);
+    void saveByTransId(QString translationId, QString reply);
 private:
     Ui::MainWindow *ui;
     Ui::textOptionForm textOptionForm;
@@ -92,6 +97,8 @@ private:
     QSettings settings;
     Request *_request = nullptr;
     Share *_share = nullptr;
+    LineByLine *_lineByLine = nullptr;
+
     Error * _error = nullptr;
     QList<QStringList> currentTranslationData;
     QMediaPlayer *_player = nullptr;
@@ -105,6 +112,7 @@ private:
     QWidget *textOptionWidget = nullptr;
     QString selectedText;
     bool playSelected = false;
+    QString translationId;
 
 
 };
