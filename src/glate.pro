@@ -34,11 +34,13 @@ SOURCES += \
         controlbutton.cpp \
         error.cpp \
         history.cpp \
+        linebyline.cpp \
         main.cpp \
         mainwindow.cpp \
         request.cpp \
         settings.cpp \
         share.cpp \
+        translationdownloader.cpp \
         utils.cpp \
         waitingspinnerwidget.cpp
 
@@ -46,10 +48,12 @@ HEADERS += \
         controlbutton.h \
         error.h \
         history.h \
+        linebyline.h \
         mainwindow.h \
         request.h \
         settings.h \
         share.h \
+        translationdownloader.h \
         utils.h \
         waitingspinnerwidget.h
 
@@ -57,6 +61,7 @@ FORMS += \
         error.ui \
         history.ui \
         history_item.ui \
+        linebyline.ui \
         mainwindow.ui \
         settings.ui \
         share.ui \
