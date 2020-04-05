@@ -40,7 +40,7 @@
         </font>
        </property>
        <property name="text">
-        <string>Currently history holds 30 recent translations</string>
+        <string>History holds your 20 recent translations</string>
        </property>
       </widget>
      </item>
@@ -48,6 +48,9 @@
    </item>
    <item>
     <widget class="QListWidget" name="historyList">
+     <property name="alternatingRowColors">
+      <bool>true</bool>
+     </property>
      <property name="verticalScrollMode">
       <enum>QAbstractItemView::ScrollPerPixel</enum>
      </property>

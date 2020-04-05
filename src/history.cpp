@@ -9,6 +9,11 @@ History::History(QWidget *parent) :
     ui(new Ui::History)
 {
     ui->setupUi(this);
+    ui->historyList->setSelectionRectVisible(true);
+    ui->historyList->setAlternatingRowColors(true);
+    ui->historyList->setDragEnabled(false);
+    ui->historyList->setDropIndicatorShown(false);
+    ui->historyList->setDragDropMode(QAbstractItemView::NoDragDrop);
 }
 
 History::~History()
@@ -18,10 +23,14 @@ History::~History()
 
 void History::on_clearall_clicked()
 {
-
+    QDir dir(utils::returnPath("history"));
+    if(dir.removeRecursively()){
+        ui->historyList->clear();
+        ui->clearall->setEnabled(false);
+    }
 }
 
-void History::insertItem(QStringList meta,bool fromHistory){
+void History::insertItem(QStringList meta,bool fromHistory,QString translationId){
     QWidget *histWid = new QWidget();
     if(meta.count()>=5){
         QString from, to, src1, src2, date;
@@ -31,6 +40,21 @@ void History::insertItem(QStringList meta,bool fromHistory){
         src2    = meta.at(3);
         date    = meta.at(4);
         history_item_ui.setupUi(histWid);
+        histWid->setObjectName("widget_"+translationId);
+        histWid->setStyleSheet("QWidget#widget_"+translationId+"{background: transparent;}");
+        history_item_ui.remove->setObjectName("remove_"+translationId);
+        history_item_ui.load->setObjectName("load_"+translationId);
+        connect(history_item_ui.remove,&QPushButton::clicked,[=](){
+           QFile file(utils::returnPath("history")+"/"+translationId+".json");
+           if(file.remove()){
+               loadHistory();
+           }
+        });
+
+        connect(history_item_ui.load,&QPushButton::clicked,[=](){
+           emit setTranslationId(translationId);
+           loadHistoryItem(utils::returnPath("history")+"/"+translationId+".json");
+        });
         history_item_ui.time->setText(date);
         history_item_ui.from->setText(from);
         history_item_ui.to->setText(to);
@@ -42,13 +66,31 @@ void History::insertItem(QStringList meta,bool fromHistory){
         item->setSizeHint(histWid->minimumSizeHint());
         this->setMinimumWidth(histWid->width()+60);
         ui->historyList->addItem(item);
+        ui->clearall->setEnabled(true);
         if(!fromHistory){
-            save(meta);
+            save(meta,translationId);
         }
     }
 }
 
-void History::save(QStringList meta){
+void History::loadHistoryItem(QString itemPath){
+    QFile file(itemPath);
+    if(file.exists()){
+        //open file , read it to stringlist pass it to insertItem
+        QJsonDocument doc = loadJson(itemPath);
+        QJsonObject jsonObject = doc.object();
+        QString from, to, src1, src2,date;
+        from = jsonObject.value("from").toString();
+        to   = jsonObject.value("to").toString();
+        src1 = jsonObject.value("src1").toString();
+        src2 = jsonObject.value("src2").toString();
+        date = jsonObject.value("date").toString();
+        emit historyItemMeta(QStringList()<<from<<to<<src1<<src2);
+    }
+    file.deleteLater();
+}
+
+void History::save(QStringList meta,QString translationId){
     if(meta.count()>=5){
         QString from, to, src1, src2, date;
         from    = meta.at(0);
@@ -56,7 +98,7 @@ void History::save(QStringList meta){
         src1    = meta.at(2);
         src2    = meta.at(3);
         date    = meta.at(4);
-        QString history_file_path = utils::returnPath("history")+"/"+utils::generateRandomId(15)+".json";
+        QString history_file_path = utils::returnPath("history")+"/"+translationId+".json";
         QVariantMap map;
         map.insert("date",date);
         map.insert("from", from);
@@ -91,9 +133,11 @@ void History::loadHistory()
     ui->historyList->clear();
     QString history_path = utils::returnPath("history");
     QDir dir(history_path);
+    dir.setSorting(QDir::Time);
     QStringList filter;
     filter<< +"*.json";
     QFileInfoList files = dir.entryInfoList(filter);
+    ui->clearall->setEnabled(files.isEmpty()==false);
     foreach (QFileInfo fileInfo, files)
     {
         //open file , read it to stringlist pass it to insertItem
@@ -105,6 +149,6 @@ void History::loadHistory()
         src1 = jsonObject.value("src1").toString();
         src2 = jsonObject.value("src2").toString();
         date = jsonObject.value("date").toString();
-        insertItem(QStringList()<<from<<to<<src1.left(100)<<src2.left(100)<<date,true);
+        insertItem(QStringList()<<from<<to<<src1.left(100)<<src2.left(100)<<date,true,fileInfo.baseName());
     }
 }

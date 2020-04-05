@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>700</width>
-    <height>154</height>
+    <width>729</width>
+    <height>150</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -55,8 +55,8 @@ background: transparent;
         <property name="verticalSpacing">
          <number>2</number>
         </property>
-        <item row="1" column="0">
-         <widget class="QLabel" name="src1">
+        <item row="1" column="1">
+         <widget class="QLabel" name="src2">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
             <horstretch>0</horstretch>
@@ -80,8 +80,29 @@ background: transparent;
           </property>
          </widget>
         </item>
-        <item row="1" column="1">
-         <widget class="QLabel" name="src2">
+        <item row="0" column="0">
+         <widget class="QLabel" name="from">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="font">
+           <font>
+            <pointsize>12</pointsize>
+           </font>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">color: rgb(44, 162, 207);</string>
+          </property>
+          <property name="text">
+           <string>from</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QLabel" name="src1">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
             <horstretch>0</horstretch>
@@ -126,28 +147,30 @@ background: transparent;
           </property>
          </widget>
         </item>
-        <item row="0" column="0">
-         <widget class="QLabel" name="from">
+        <item row="0" column="2">
+         <widget class="QPushButton" name="load">
           <property name="sizePolicy">
-           <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+           <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
             <horstretch>0</horstretch>
             <verstretch>0</verstretch>
            </sizepolicy>
           </property>
-          <property name="font">
-           <font>
-            <pointsize>12</pointsize>
-           </font>
-          </property>
-          <property name="styleSheet">
-           <string notr="true">color: rgb(44, 162, 207);</string>
-          </property>
           <property name="text">
-           <string>from</string>
+           <string>Load translation</string>
+          </property>
+          <property name="icon">
+           <iconset resource="icons.qrc">
+            <normaloff>:/icons/translate-2.png</normaloff>:/icons/translate-2.png</iconset>
+          </property>
+          <property name="iconSize">
+           <size>
+            <width>16</width>
+            <height>16</height>
+           </size>
           </property>
          </widget>
         </item>
-        <item row="0" column="2">
+        <item row="1" column="2">
          <widget class="QPushButton" name="remove">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
@@ -161,29 +184,6 @@ background: transparent;
           <property name="icon">
            <iconset resource="icons.qrc">
             <normaloff>:/icons/close-fill.png</normaloff>:/icons/close-fill.png</iconset>
-          </property>
-          <property name="iconSize">
-           <size>
-            <width>16</width>
-            <height>16</height>
-           </size>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="2">
-         <widget class="QPushButton" name="load">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="text">
-           <string>Load in view</string>
-          </property>
-          <property name="icon">
-           <iconset resource="icons.qrc">
-            <normaloff>:/icons/translate-2.png</normaloff>:/icons/translate-2.png</iconset>
           </property>
           <property name="iconSize">
            <size>
