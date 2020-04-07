@@ -29,9 +29,10 @@ MainWindow::MainWindow(QWidget *parent) :
     _translate->setSizePolicy(QSizePolicy::Maximum,QSizePolicy::Maximum);
     _translate->setFixedSize(36,36);
     _translate->setMouseTracking(true);
-    _translate->setToolTip("Translate");
+    _translate->setToolTip("Translate (Shitf + Enter)");
     _translate->setStyleSheet("border:none;border-radius:18px;");
     _translate->setIconSize(QSize(28,28));
+    _translate->setShortcut(QKeySequence("Shift+Return"));
     _translate->setIcon(QIcon(":/icons/arrow-right-circle-line.png"));
     QTimer::singleShot(100,this,SLOT(resizeFix()));
     connect(_translate,SIGNAL(clicked()),this,SLOT(translate_clicked()));
@@ -168,6 +169,11 @@ MainWindow::MainWindow(QWidget *parent) :
             translationId = settings.value("lastTranslation").toString();
             historyWidget->loadHistoryItem(utils::returnPath("history")+"/"+translationId+".json");
         }
+    }
+
+    if(settings.value("firstRun").isValid()==false){
+        on_help_clicked();
+        settings.setValue("firstRun",false);
     }
 }
 
@@ -740,5 +746,20 @@ QString MainWindow::getLangCode(QString langName){
         QStringList langCodeList = _langCode;
         QString langCode = langCodeList.at(_langName.lastIndexOf(langName)-1);
         return langCode;
+    }
+}
+
+void MainWindow::on_help_clicked()
+{
+    if(slider==nullptr){
+        slider = new Slider(this);
+        slider->setWindowTitle(QApplication::applicationName()+" | Introduction");
+        slider->setWindowFlag(Qt::Dialog);
+        slider->setWindowModality(Qt::ApplicationModal);
+        slider->setMinimumSize(680,420);
+    }
+    if(slider->isVisible()==false){
+       slider->showNormal();
+       slider->start();
     }
 }

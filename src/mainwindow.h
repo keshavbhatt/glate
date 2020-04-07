@@ -21,6 +21,7 @@
 #include "controlbutton.h"
 #include "utils.h"
 #include "linebyline.h"
+#include "slider.h"
 
 
 namespace Ui {
@@ -88,6 +89,8 @@ private slots:
     QString getLangName(QString langCode);
     QString getLangCode(QString langName);
     void saveByTransId(QString translationId, QString reply);
+    void on_help_clicked();
+
 private:
     Ui::MainWindow *ui;
     Ui::textOptionForm textOptionForm;
@@ -113,6 +116,8 @@ private:
     QString selectedText;
     bool playSelected = false;
     QString translationId;
+
+    Slider * slider = nullptr;
 
 
 };
