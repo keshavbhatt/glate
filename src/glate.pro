@@ -40,6 +40,7 @@ SOURCES += \
         request.cpp \
         settings.cpp \
         share.cpp \
+        slider.cpp \
         translationdownloader.cpp \
         utils.cpp \
         waitingspinnerwidget.cpp
@@ -53,6 +54,7 @@ HEADERS += \
         request.h \
         settings.h \
         share.h \
+        slider.h \
         translationdownloader.h \
         utils.h \
         waitingspinnerwidget.h
@@ -65,6 +67,7 @@ FORMS += \
         mainwindow.ui \
         settings.ui \
         share.ui \
+        slider.ui \
         textoptionform.ui
 
 # Default rules for deployment.
@@ -88,7 +91,8 @@ INSTALLS += target icon desktop
 RESOURCES += \
     icons.qrc \
     qbreeze.qrc \
-    resources.qrc
+    resources.qrc \
+    slides.qrc
 
 DISTFILES +=
 
