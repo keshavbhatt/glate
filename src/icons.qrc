@@ -36,5 +36,6 @@
         <file>icons/twitter-line.png</file>
         <file>icons/share-line.png</file>
         <file>icons/error-warning-line.png</file>
+        <file>icons/play-line.png</file>
     </qresource>
 </RCC>
