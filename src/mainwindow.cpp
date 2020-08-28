@@ -13,6 +13,9 @@
 #include <QScreen>
 #include <QMediaPlaylist>
 
+#include <QShortcut>
+#include <QKeySequence>
+#include <QKeyEvent>
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -29,10 +32,11 @@ MainWindow::MainWindow(QWidget *parent) :
     _translate->setSizePolicy(QSizePolicy::Maximum,QSizePolicy::Maximum);
     _translate->setFixedSize(36,36);
     _translate->setMouseTracking(true);
-    _translate->setToolTip("Translate (Shitf + Enter)");
+    _translate->setToolTip("Translate (Shift + Enter)");
     _translate->setStyleSheet("border:none;border-radius:18px;");
     _translate->setIconSize(QSize(28,28));
-    _translate->setShortcut(QKeySequence("Shift+Return"));
+    QShortcut *shortcut = new QShortcut(QKeySequence(tr("Shift+Return","Translate")), _translate,SLOT(click()));
+    shortcut->setContext(Qt::ApplicationShortcut);
     _translate->setIcon(QIcon(":/icons/arrow-right-circle-line.png"));
     QTimer::singleShot(100,this,SLOT(resizeFix()));
     connect(_translate,SIGNAL(clicked()),this,SLOT(translate_clicked()));
@@ -241,6 +245,8 @@ void MainWindow::init_textOptionWidget()
 
     ui->src1->viewport()->installEventFilter(this);
     ui->src2->viewport()->installEventFilter(this);
+    ui->src1->installEventFilter(this);
+    ui->src2->installEventFilter(this);
 }
 
 void MainWindow::textSelectionChanged(QTextEdit *editor)
@@ -285,6 +291,20 @@ bool MainWindow::eventFilter(QObject* o, QEvent* e)
     {
         if(o == ui->src1->viewport() || o == ui->src2->viewport()){
             textSelectionChanged(qobject_cast<QTextEdit*>(o->parent()));
+        }
+    }
+    //simulate translate shortcut instead of going to new line when cursor is on textEdit widgets.
+    if(e->type() == QEvent::KeyRelease || e->type() == QEvent::KeyPress || e->type() == QEvent::ShortcutOverride)
+    {
+        if(o == ui->src1 || o == ui->src2){
+            QKeyEvent *keyEvent = static_cast<QKeyEvent*>(e);
+            if((keyEvent->key() == Qt::Key_Return)  &&
+                    keyEvent->modifiers() & (Qt::ShiftModifier)){
+                _translate->click();
+                return true;
+            }else{
+                return false;
+            }
         }
     }
     return QMainWindow::eventFilter(o, e);
@@ -532,7 +552,7 @@ void MainWindow::on_lang1_currentIndexChanged(int index)
 {
      ui->switch_lang->setEnabled(index!=0);
      settings.setValue("lang1",index);
-     _translate->setToolTip("Translate from "+ui->lang1->itemText(index)+" to "+ui->lang2->itemText(ui->lang2->currentIndex()));
+     _translate->setToolTip("Translate from "+ui->lang1->itemText(index)+" to "+ui->lang2->itemText(ui->lang2->currentIndex()) + "(Shift + Enter)");
 }
 
 void MainWindow::on_lang2_currentIndexChanged(int index)

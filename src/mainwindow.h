@@ -42,10 +42,15 @@ protected slots:
     bool eventFilter(QObject *o, QEvent *e);
 private slots:
     void setStyle(QString fname);
+
     void readLangCode();
+
     void resizeFix();
+
     void translate_clicked();
+
     void showError(QString message);
+
     void on_clear_clicked();
 
     void on_paste_clicked();
@@ -87,8 +92,11 @@ private slots:
     void on_lineByline_clicked();
 
     QString getLangName(QString langCode);
+
     QString getLangCode(QString langName);
+
     void saveByTransId(QString translationId, QString reply);
+
     void on_help_clicked();
 
 private:
