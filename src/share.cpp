@@ -275,6 +275,7 @@ void Share::concat(QString currentDownloadDir){
         settings.setValue("sharePathAudio",QFileInfo(fileName).path());
     }else {
         showStatus("<span style='color:red'>Share: </span>file save operation cancelled.");
+        ui->download->setEnabled(true);
     }
 }
 
