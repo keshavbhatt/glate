@@ -7,34 +7,58 @@ Slider::Slider(QWidget *parent) :
     ui(new Ui::Slider)
 {
     ui->setupUi(this);
-
     /*  Set Global variables here
-     *  total = total numbers of slides in resource.
+     *  total        = total numbers of slides in resource.
      *  currentIndex = index where the slider will start, this updates with time set in timeout
+     *  progeressbar = show slide timer based progressbar on top.
+     *  duration     = duration of slide while auto playback
     */
     total = 8;
     currentIndex = 0;
     duration = 10000;
     progressbar = false;
+
     ui->progressBar->setMinimum(0);
     ui->progressBar->setMaximum(100);
 
+    if(progressbar== false){
+        ui->progressBar->hide();
+    }
+
+    connect(ui->next,SIGNAL(clicked()),this,SLOT(next()));
+    connect(ui->prev,SIGNAL(clicked()),this,SLOT(prev()));
+    connect(ui->skip,SIGNAL(clicked(bool)),this,SLOT(close()));
+
     timer = new QTimer (this);
     timer->setInterval(duration);
-    connect(timer,&QTimer::timeout,[=](){
-       next();
-    });
+    connect(timer,SIGNAL(timeout()),this,SLOT(next()));
 
     loadSlides();
-
-//    QShortcut *next = new QShortcut(QKeySequence(Qt::Key_Right), parent,nullptr,nullptr, Qt::WindowShortcut);
-//    QObject::connect(next, SIGNAL(activated()), this, SLOT(next()));
-//    QShortcut *prev = new QShortcut(QKeySequence(Qt::Key_Left), parent,nullptr,nullptr,Qt::WindowShortcut);
-//    QObject::connect(prev, SIGNAL(activated()), this, SLOT(prev()));
 }
 
-void Slider::loadSlides(){
-    for (int i = 0; i < total; i++) {
+
+
+Slider::~Slider()
+{
+    delete ui;
+}
+
+void Slider::closeEvent(QCloseEvent *event)
+{
+    reset();
+    QWidget::closeEvent(event);
+}
+
+void Slider::start()
+{
+    changeSlide(0);
+    timer->start();
+}
+
+void Slider::loadSlides()
+{
+    for (int i = 0; i < total; i++)
+    {
         QFile file(":/slides/"+QString::number(i)+".html");
         file.open(QIODevice::ReadOnly);
         createSlide(file.readAll(),i);
@@ -42,23 +66,8 @@ void Slider::loadSlides(){
     }
 }
 
-Slider::~Slider()
+void Slider::progressBarUpdate()
 {
-    delete ui;
-}
-
-void Slider::closeEvent(QCloseEvent *event){
-    reset();
-    QWidget::closeEvent(event);
-}
-
-void Slider::start(){
-    changeSlide(0);
-    timer->start();
-}
-
-
-void Slider::progressBarUpdate(){
     if(progressbar){
         animation = new QPropertyAnimation(ui->progressBar, "value");
         animation->setDuration(duration);
@@ -68,7 +77,8 @@ void Slider::progressBarUpdate(){
     }
 }
 
-void Slider::stop(){
+void Slider::stop()
+{
     timer->stop();
     updateStopButton();
     progressBarUpdate();
@@ -77,13 +87,15 @@ void Slider::stop(){
     }
 }
 
-void Slider::reset(){
+void Slider::reset()
+{
     currentIndex = 0;
     changeSlide(currentIndex);
     stop();
 }
 
-void Slider::updateStopButton(){
+void Slider::updateStopButton()
+{
     if(timer->isActive()){
         ui->stop->setToolTip("Stop");
         ui->stop->setIcon(QIcon(":/icons/stop-line.png"));
@@ -94,7 +106,8 @@ void Slider::updateStopButton(){
     }
 }
 
-void Slider::next(){
+void Slider::next()
+{
     timer->stop();
     if(currentIndex>=total-1){
         stop();
@@ -105,7 +118,8 @@ void Slider::next(){
     updateStopButton();
 }
 
-void Slider::prev(){
+void Slider::prev()
+{
     timer->stop();
     if(currentIndex==0){
         currentIndex = total-1;
@@ -117,7 +131,9 @@ void Slider::prev(){
     updateStopButton();
 }
 
-void Slider::changeSlide(int index){
+void Slider::changeSlide(int index)
+{
+
     //hide all in view
     for (int i = 0; i < ui->view->count(); ++i){
       QWidget *widget = ui->view->itemAt(i)->widget();
@@ -133,7 +149,6 @@ void Slider::changeSlide(int index){
     QPushButton *navBtn = this->findChild<QPushButton*>("navBtn_"+QString::number(index));
     navBtn->setChecked(true);
     progressBarUpdate();
-
 }
 
 void Slider::createSlide(QString html,int index){
@@ -152,6 +167,7 @@ void Slider::createSlide(QString html,int index){
     QPushButton *navBtn = new QPushButton("",this);
     navBtn->setCheckable(true);
     navBtn->setFixedSize(12,12);
+    //uncomment to make buttons circular
     navBtn->setStyleSheet("border-radius:"+QString::number(navBtn->width()/2));
     navBtn->setObjectName("navBtn_"+QString::number(index));
     connect(navBtn,&QPushButton::clicked,[=](){
@@ -170,16 +186,6 @@ void Slider::uncheckAllNavBtn(){
     }
 }
 
-void Slider::on_prev_clicked()
-{
-    prev();
-}
-
-void Slider::on_next_clicked()
-{
-    next();
-}
-
 void Slider::on_stop_clicked()
 {
     if(timer->isActive()){
@@ -192,9 +198,4 @@ void Slider::on_stop_clicked()
         timer->start();
     }
     updateStopButton();
-}
-
-void Slider::on_skip_clicked()
-{
-    this->close();
 }

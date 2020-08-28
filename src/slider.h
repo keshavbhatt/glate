@@ -34,16 +34,9 @@ private slots:
     void prev();
     void changeSlide(int index);
     void uncheckAllNavBtn();
-
-    void on_prev_clicked();
-
-    void on_next_clicked();
-
     void on_stop_clicked();
-
     void progressBarUpdate();
     void updateStopButton();
-    void on_skip_clicked();
 
 private:
     Ui::Slider *ui;
