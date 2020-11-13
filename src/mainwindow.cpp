@@ -421,7 +421,7 @@ void MainWindow::translate_clicked()
             showError(errorString);
         });
 
-        QString src1 = ui->src1->toPlainText();
+        QString src1 = ui->src1->toPlainText().replace("&","and");
         QString urlStr = "https://translate.googleapis.com/translate_a/single?client=gtx&sl="+
                 getSourceLang()+"&tl="+getTransLang()+"&dt=t&q="+
                 src1;
