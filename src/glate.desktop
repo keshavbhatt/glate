@@ -1,11 +1,12 @@
 [Desktop Entry]
 Version=1.0
+GenericName=Translator and Text2Speech
 GenericName=Glate
 Name=Glate
 Type=Application
-Icon=${SNAP}/meta/gui/icon.png
+Icon=glate
 Keywords=Translator;Google;TTS;Speech
-Exec=glate %F
+Exec=glate
 Categories=Utility;Qt;Player;
 Terminal=false
 Name[en_US]=Glate
