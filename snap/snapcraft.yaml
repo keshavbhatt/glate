@@ -108,7 +108,7 @@ parts:
 
             cp -rf ${SNAPCRAFT_PART_SRC}/src/glate.desktop ${SNAPCRAFT_PART_INSTALL}/usr/share/applications/glate.desktop
 
-   desktop-launch:
+  desktop-launch:
      plugin: nil
      source: https://github.com/keshavbhatt/qt515-core20.git
      after: [build-src]
