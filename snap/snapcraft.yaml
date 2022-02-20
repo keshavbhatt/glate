@@ -75,7 +75,7 @@ parts:
      override-build: |
             snapcraftctl build
 
-            apt install -y build-essential qt515base qt515tools qt515xmlpatterns libgl1-mesa-dev
+            apt install -y build-essential qt515base qt515tools qt515multimedia qt515x11extras qt515xmlpatterns libgl1-mesa-dev
 
             QT_BASE_DIR=/opt/qt515
             export QTDIR=$QT_BASE_DIR
