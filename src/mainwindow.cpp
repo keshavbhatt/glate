@@ -1,25 +1,15 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
-#include <QMessageBox>
-#include <QMimeData>
-#include <QTimer>
-
-#include <QDesktopWidget>
-#include <QJsonArray>
-#include <QJsonDocument>
-#include <QJsonObject>
-#include <QMediaPlaylist>
-#include <QScreen>
-#include <QScrollBar>
-#include <QVariant>
-
-#include <QKeyEvent>
-#include <QKeySequence>
-#include <QShortcut>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow) {
   ui->setupUi(this);
+
+  SystemTrayManager *trayManager = new SystemTrayManager(this);
+
+  connect(trayManager, &SystemTrayManager::showWindow, this, &MainWindow::show);
+  connect(trayManager, &SystemTrayManager::hideWindow, this, &MainWindow::hide);
+
   this->setWindowTitle(QApplication::applicationName() + " v" +
                        QApplication::applicationVersion());
   this->setWindowIcon(QIcon(":/icons/app/icon-64.png"));
@@ -430,12 +420,11 @@ void MainWindow::translate_clicked() {
     qDebug() << urlStr;
 
     if (urlStr.isEmpty()) {
-        showError("Invalid Input.");
+      showError("Invalid Input.");
     } else {
-        _request->get(QUrl(urlStr));
-        translationId = utils::generateRandomId(20);
+      _request->get(QUrl(urlStr));
+      translationId = utils::generateRandomId(20);
     }
-
   }
 }
 

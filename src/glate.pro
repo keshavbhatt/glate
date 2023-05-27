@@ -41,6 +41,7 @@ SOURCES += \
         settings.cpp \
         share.cpp \
         slider.cpp \
+        systemtraymanager.cpp \
         translationdownloader.cpp \
         utils.cpp \
         waitingspinnerwidget.cpp
@@ -55,6 +56,7 @@ HEADERS += \
         settings.h \
         share.h \
         slider.h \
+        systemtraymanager.h \
         translationdownloader.h \
         utils.h \
         waitingspinnerwidget.h

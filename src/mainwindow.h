@@ -3,13 +3,27 @@
 
 #include <QClipboard>
 #include <QDebug>
+#include <QDesktopWidget>
 #include <QFile>
 #include <QHotkey>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QKeyEvent>
+#include <QKeySequence>
 #include <QMainWindow>
 #include <QMediaPlayer>
+#include <QMediaPlaylist>
+#include <QMessageBox>
+#include <QMimeData>
 #include <QPushButton>
+#include <QScreen>
+#include <QScrollBar>
 #include <QSettings>
+#include <QShortcut>
 #include <QTextEdit>
+#include <QTimer>
+#include <QVariant>
 
 #include "controlbutton.h"
 #include "error.h"
@@ -22,6 +36,7 @@
 #include "ui_textoptionform.h"
 #include "utils.h"
 #include "waitingspinnerwidget.h"
+#include "systemtraymanager.h"
 
 namespace Ui {
 class MainWindow;
