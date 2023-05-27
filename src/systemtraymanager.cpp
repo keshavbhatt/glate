@@ -1,29 +1,30 @@
 #include "systemtraymanager.h"
+#include <QDebug>
 
 SystemTrayManager::SystemTrayManager(QObject *parent) : QObject{parent} {
   if (QSystemTrayIcon::isSystemTrayAvailable()) {
     trayIcon =
         new QSystemTrayIcon(QIcon(":/icons/app/icon-64.png"), this->parent());
 
-    trayMenu = new QMenu(0);
-    showAction = new QAction("Show", this);
-    hideAction = new QAction("Hide", this);
-    quitAction = new QAction("Quit", this);
+    m_trayMenu = new QMenu(0);
+    m_showAction =
+        new QAction(tr("Show %1").arg(qApp->applicationName()), this);
+    m_hideAction =
+        new QAction(tr("Hide %1").arg(qApp->applicationName()), this);
+    m_quitAction = new QAction(tr("Quit"), this);
 
-    showAction->setDisabled(true);
+    m_trayMenu->addAction(m_showAction);
+    m_trayMenu->addAction(m_hideAction);
+    m_trayMenu->addSeparator();
+    m_trayMenu->addAction(m_quitAction);
 
-    trayMenu->addAction(showAction);
-    trayMenu->addAction(hideAction);
-    trayMenu->addSeparator();
-    trayMenu->addAction(quitAction);
+    trayIcon->setContextMenu(m_trayMenu);
 
-    trayIcon->setContextMenu(trayMenu);
-
-    connect(showAction, &QAction::triggered, this,
+    connect(m_showAction, &QAction::triggered, this,
             &SystemTrayManager::showMainWindow);
-    connect(hideAction, &QAction::triggered, this,
+    connect(m_hideAction, &QAction::triggered, this,
             &SystemTrayManager::hideMainWindow);
-    connect(quitAction, &QAction::triggered, this,
+    connect(m_quitAction, &QAction::triggered, this,
             &SystemTrayManager::quitApplication);
 
     trayIcon->show();
@@ -38,16 +39,16 @@ SystemTrayManager::~SystemTrayManager() {
     delete trayIcon;
 }
 
-void SystemTrayManager::showMainWindow() {
-  emit showWindow();
-  showAction->setDisabled(true);
-  hideAction->setDisabled(false);
+void SystemTrayManager::updateMenu(bool windowVisible) {
+  if (QSystemTrayIcon::isSystemTrayAvailable()) {
+    qWarning() << windowVisible;
+    m_showAction->setEnabled(!windowVisible);
+    m_hideAction->setEnabled(windowVisible);
+  }
 }
 
-void SystemTrayManager::hideMainWindow() {
-  emit hideWindow();
-  hideAction->setDisabled(true);
-  showAction->setDisabled(false);
-}
+void SystemTrayManager::showMainWindow() { emit showWindow(); }
+
+void SystemTrayManager::hideMainWindow() { emit hideWindow(); }
 
 void SystemTrayManager::quitApplication() { qApp->quit(); }

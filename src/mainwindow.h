@@ -33,10 +33,10 @@
 #include "settings.h"
 #include "share.h"
 #include "slider.h"
+#include "systemtraymanager.h"
 #include "ui_textoptionform.h"
 #include "utils.h"
 #include "waitingspinnerwidget.h"
-#include "systemtraymanager.h"
 
 namespace Ui {
 class MainWindow;
@@ -50,93 +50,68 @@ public:
   ~MainWindow();
 
 protected slots:
-  void resizeEvent(QResizeEvent *event);
-  void closeEvent(QCloseEvent *event);
-  bool eventFilter(QObject *o, QEvent *e);
+  void changeEvent(QEvent *e) override;
+  void resizeEvent(QResizeEvent *event) override;
+  void closeEvent(QCloseEvent *event) override;
+  bool eventFilter(QObject *o, QEvent *e) override;
 private slots:
-  void setStyle(QString fname);
-
-  void readLangCode();
-
-  void resizeFix();
-
-  void translate_clicked();
-
-  void showError(QString message);
 
   void on_clear_clicked();
-
   void on_paste_clicked();
-
   void on_switch_lang_clicked();
-
   void on_lang1_currentIndexChanged(int index);
-
   void on_lang2_currentIndexChanged(int index);
-
-  QString getTransLang();
-
-  QString getSourceLang();
-
-  void processTranslation(QString reply);
-
   void on_play2_clicked();
-
   void on_play1_clicked();
-
   void on_src1_textChanged();
-
   void on_copy_clicked();
-
   void on_src2_textChanged();
-
   void on_share_clicked();
-
-  void init_settings();
-
   void on_settings_clicked();
-
-  void textSelectionChanged(QTextEdit *editor);
   void on_history_clicked();
-
-  void init_history();
   void on_lineByline_clicked();
-
-  QString getLangName(QString langCode);
-
-  QString getLangCode(QString langName);
-
-  void saveByTransId(QString translationId, QString reply);
-
   void on_help_clicked();
+
+  void readLangCode();
+  void resizeFix();
+  void translate_clicked();
+  void init_history();
+  QString getTransLang();
+  QString getSourceLang();
+  void init_settings();
+  void setStyle(const QString &fname);
+  void showError(const QString &message);
+  void textSelectionChanged(QTextEdit *editor);
+  QString getLangName(const QString &langCode);
+  QString getLangCode(const QString &langName);
+  void saveByTransId(const QString &translationId, const QString &reply);
+  void processTranslation(const QString &reply);
 
 private:
   Ui::MainWindow *ui;
   Ui::textOptionForm textOptionForm;
-  QStringList _langName, _langCode, _supportedTts;
-  controlButton *_translate = nullptr;
-  WaitingSpinnerWidget *_loader = nullptr;
-  QSettings settings;
-  Request *_request = nullptr;
-  Share *_share = nullptr;
-  LineByLine *_lineByLine = nullptr;
 
-  Error *_error = nullptr;
-  QList<QStringList> currentTranslationData;
-  QMediaPlayer *_player = nullptr;
-  QClipboard *clipboard = nullptr;
+  controlButton *m_translate = nullptr;
+  WaitingSpinnerWidget *m_loader = nullptr;
+  Error *m_error = nullptr;
+  LineByLine *m_lineByLine = nullptr;
+  Share *m_share = nullptr;
+  Request *m_request = nullptr;
+  QMediaPlayer *m_player = nullptr;
+  QClipboard *m_clipboard = nullptr;
+  Settings *m_settingsWidget = nullptr;
+  History *m_historyWidget = nullptr;
+  QHotkey *m_nativeHotkey = nullptr;
+  QWidget *m_textOptionWidget = nullptr;
+  Slider *m_slider = nullptr;
+  SystemTrayManager *m_trayManager = nullptr;
 
-  Settings *settingsWidget = nullptr;
-  History *historyWidget = nullptr;
-
-  QHotkey *nativeHotkey = nullptr;
-
-  QWidget *textOptionWidget = nullptr;
-  QString selectedText;
-  bool playSelected = false;
-  QString translationId;
-
-  Slider *slider = nullptr;
+  QString m_selectedText;
+  bool m_playSelected = false;
+  QString m_translationId;
+  QStringList m_langName, m_langCode, m_supportedTts;
+  QSettings m_settings;
+  QList<QStringList> m_currentTranslationData;
 };
 
 #endif // MAINWINDOW_H

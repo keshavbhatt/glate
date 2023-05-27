@@ -15,16 +15,18 @@ public:
 
   ~SystemTrayManager();
 
+  void updateMenu(bool windowVisible);
+
 signals:
   void showWindow();
   void hideWindow();
 
 private:
   QSystemTrayIcon *trayIcon = nullptr;
-  QMenu *trayMenu = nullptr;
-  QAction *showAction = nullptr;
-  QAction *hideAction = nullptr;
-  QAction *quitAction = nullptr;
+  QMenu *m_trayMenu = nullptr;
+  QAction *m_showAction = nullptr;
+  QAction *m_hideAction = nullptr;
+  QAction *m_quitAction = nullptr;
 
 private slots:
   void showMainWindow();
