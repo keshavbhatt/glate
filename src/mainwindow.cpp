@@ -411,18 +411,31 @@ void MainWindow::translate_clicked() {
       showError(errorString);
     });
 
-    QString src1 = ui->src1->toPlainText().replace("&", "and").replace("#", "");
-    QString urlStr =
-        "https://translate.googleapis.com/translate_a/single?client=gtx&sl=" +
-        getSourceLang() + "&tl=" + getTransLang() + "&dt=t&q=" + src1;
-    QString url = QUrl(urlStr).toString(QUrl::FullyEncoded);
-    qDebug() << url;
-    if (url.isEmpty()) {
-      showError("Invalid Input.");
+    QString src1 = ui->src1->toPlainText();
+
+    QUrl url("https://translate.googleapis.com/translate_a/single");
+    QUrlQuery urlQuery;
+
+    urlQuery.addQueryItem("client", "gtx");
+    urlQuery.addQueryItem("sl", getSourceLang());
+    urlQuery.addQueryItem("tl", getTransLang());
+    urlQuery.addQueryItem("dt", "t");
+    urlQuery.addQueryItem("q", src1);
+
+    urlQuery.setQueryDelimiters('=', '&');
+
+    url.setQuery(urlQuery);
+
+    QString urlStr = url.toString(QUrl::FullyEncoded);
+    qDebug() << urlStr;
+
+    if (urlStr.isEmpty()) {
+        showError("Invalid Input.");
     } else {
-      _request->get(QUrl(url));
-      translationId = utils::generateRandomId(20);
+        _request->get(QUrl(urlStr));
+        translationId = utils::generateRandomId(20);
     }
+
   }
 }
 
