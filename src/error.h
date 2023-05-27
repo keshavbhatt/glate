@@ -7,21 +7,20 @@ namespace Ui {
 class Error;
 }
 
-class Error : public QWidget
-{
-    Q_OBJECT
+class Error : public QWidget {
+  Q_OBJECT
 
 public:
-    explicit Error(QWidget *parent = nullptr);
-    ~Error();
+  explicit Error(QWidget *parent = nullptr);
+  ~Error();
 
 public slots:
-    void setError(QString shortMessage, QString detail);
+  void setError(QString shortMessage, QString detail);
 private slots:
-    void on_ok_clicked();
+  void on_ok_clicked();
 
 private:
-    Ui::Error *ui;
+  Ui::Error *ui;
 };
 
 #endif // ERROR_H
