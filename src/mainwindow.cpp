@@ -42,6 +42,8 @@ MainWindow::MainWindow(QWidget *parent)
   connect(m_translate, &QAbstractButton::clicked, this,
           &MainWindow::translate_clicked);
 
+  ui->src1->installEventFilter(this);
+
   // read language codes and initialize vars
   readLangCode();
 
