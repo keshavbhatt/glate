@@ -327,7 +327,6 @@ void MainWindow::resizeFix() {
 }
 
 void MainWindow::closeEvent(QCloseEvent *event) {
-  QMainWindow::closeEvent(event);
 
   m_settings.setValue("geometry", saveGeometry());
 
@@ -342,6 +341,14 @@ void MainWindow::closeEvent(QCloseEvent *event) {
                       m_settingsWidget->quickResultCheckBoxChecked());
 
   m_trayManager->updateMenu(false);
+
+  if (QSystemTrayIcon::isSystemTrayAvailable()) {
+    this->hide();
+    event->ignore();
+    return;
+  }
+
+  QMainWindow::closeEvent(event);
 }
 
 void MainWindow::resizeEvent(QResizeEvent *event) {
