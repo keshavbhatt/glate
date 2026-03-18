@@ -67,4 +67,4 @@ void SystemTrayManager::showMainWindow() { emit showWindow(); }
 
 void SystemTrayManager::hideMainWindow() { emit hideWindow(); }
 
-void SystemTrayManager::quitApplication() { qApp->quit(); }
+void SystemTrayManager::quitApplication() { emit quitRequested(); }

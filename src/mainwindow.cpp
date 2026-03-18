@@ -19,6 +19,10 @@ MainWindow::MainWindow(QWidget *parent)
     this->hide();
     m_trayManager->updateMenu(this->isVisible());
   });
+  connect(m_trayManager, &SystemTrayManager::quitRequested, this, [=]() {
+    m_forceQuit = true;
+    this->close();
+  });
 
   m_trayManager->updateMenu(true);
 
@@ -380,7 +384,11 @@ void MainWindow::closeEvent(QCloseEvent *event) {
   m_settings.setValue("quicktrans",
                       m_settingsWidget->quickResultCheckBoxChecked());
 
-  if (m_trayManager->isTrayAvailable() && m_settingsWidget->closeToTrayEnabled()) {
+  // persist close behavior and read effective value from settings
+  m_settings.setValue("closeToTray", m_settingsWidget->closeToTrayEnabled());
+  const bool closeToTray = m_settings.value("closeToTray", true).toBool();
+
+  if (!m_forceQuit && m_trayManager->isTrayAvailable() && closeToTray) {
     m_trayManager->updateMenu(false);
     this->hide();
     event->ignore();
@@ -790,7 +798,8 @@ void MainWindow::on_copy_clicked() {
 }
 
 void MainWindow::on_share_clicked() {
-  m_share->setTranslation(ui->src2->toPlainText(), m_translationId);
+  m_share->setTranslation(ui->src2->toPlainText(), m_translationId,
+                          getTransLang());
   if (m_share->isVisible() == false) {
     m_share->showNormal();
   }

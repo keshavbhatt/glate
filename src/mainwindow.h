@@ -90,6 +90,7 @@ private:
 
   QString m_selectedText;
   bool m_playSelected = false;
+  bool m_forceQuit = false;
   QString m_translationId;
   QStringList m_langName, m_langCode, m_supportedTts;
   QSettings m_settings;

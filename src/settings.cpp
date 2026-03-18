@@ -6,6 +6,7 @@
 #include "utils.h"
 
 #include <QGuiApplication>
+#include <QSystemTrayIcon>
 
 Settings::Settings(QWidget *parent, QHotkey *hotKey)
     : QWidget(parent), ui(new Ui::Settings) {
@@ -28,6 +29,14 @@ Settings::Settings(QWidget *parent, QHotkey *hotKey)
   connect(ui->closeToTrayCheckBox, &QCheckBox::toggled, this, [=](bool checked) {
     settings.setValue("closeToTray", checked);
   });
+
+  if (!QSystemTrayIcon::isSystemTrayAvailable()) {
+    ui->closeToTrayCheckBox->setChecked(false);
+    ui->closeToTrayCheckBox->setEnabled(false);
+    ui->closeToTrayCheckBox->setToolTip(
+        tr("System tray is not available in this session."));
+    settings.setValue("closeToTray", false);
+  }
 
   if (m_hotkeySupported && this->nativeHotkey != nullptr) {
     connect(this->nativeHotkey, &QHotkey::activated, this,

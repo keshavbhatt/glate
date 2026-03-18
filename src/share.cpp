@@ -27,11 +27,12 @@ Share::Share(QWidget *parent) : QWidget(parent), ui(new Ui::Share) {
           SLOT(ffmpeg_finished(int)));
 }
 
-void Share::setTranslation(QString translation, QString uuid) {
+void Share::setTranslation(QString translation, QString uuid, QString langCode) {
   ui->translation->setPlainText(translation);
   ui->voiceGender->setCurrentIndex(
       settings.value("shareAudioVoiceGender", 0).toInt());
   translationUUID = uuid;
+  translationLangCode = langCode;
 }
 
 Share::~Share() { delete ui; }
@@ -199,6 +200,10 @@ void Share::on_download_clicked() {
   const VoiceOption &voiceConf =
       voiceIdx < voices.size() ? voices.at(voiceIdx) : voices.first();
   const QString selectedGender = voiceConf.gender;
+  const QString ttsLang =
+      voiceConf.langOverride.isEmpty()
+          ? (translationLangCode.isEmpty() ? QString("en") : translationLangCode)
+          : voiceConf.langOverride;
   showStatus("<span style='color:green'>Share: </span>Preparing " +
              voiceConf.displayName + " voice download...");
   QStringList src1Parts;
@@ -209,9 +214,7 @@ void Share::on_download_clicked() {
       QUrl url("https://www.google.com/speech-api/v1/synthesize");
       QUrlQuery params;
       params.addQueryItem("ie", "UTF-8");
-      params.addQueryItem("lang", voiceConf.langOverride.isEmpty()
-                                      ? "en"
-                                      : voiceConf.langOverride);
+      params.addQueryItem("lang", ttsLang);
       params.addQueryItem("gender", selectedGender);
       params.addQueryItem("text",
                           QUrl::toPercentEncoding(src1Parts.at(i).toUtf8()));

@@ -18,6 +18,7 @@ public:
 signals:
   void showWindow();
   void hideWindow();
+  void quitRequested();
 
 private:
   QSystemTrayIcon *trayIcon = nullptr;
@@ -31,7 +32,7 @@ private slots:
   void showMainWindow();
   void hideMainWindow();
   void onTrayIconActivated(QSystemTrayIcon::ActivationReason reason);
-  static void quitApplication();
+  void quitApplication();
 };
 
 #endif // SYSTEMTRAYMANAGER_H
