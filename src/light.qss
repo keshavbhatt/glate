@@ -531,16 +531,16 @@ QPushButton {
 }
 
 QPushButton:disabled {
-    background-color: #eff0f1;
-    border-width: 1px;
-    border-color: #b6bcc3;
+    background-color: #e5e7eb;
+    border-width: 2px;
+    border-color: #c5cbd2;
     border-style: solid;
     padding-top: 5px;
     padding-bottom: 5px;
     padding-left: 10px;
     padding-right: 10px;
     border-radius: 2px;
-    color: #71767c;
+    color: #a0a6ae;
 }
 
 /*QPushButton:focus {
@@ -994,6 +994,13 @@ QToolButton {
     border-radius: 2px;
     margin: 3px;
     padding: 5px;
+}
+
+QToolButton:disabled {
+    color: #a0a6ae;
+    background-color: transparent;
+    border: 1px solid #c5cbd2;
+    opacity: 0.5;
 }
 
 QToolButton[popupMode="1"] {

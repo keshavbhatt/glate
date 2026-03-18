@@ -9,6 +9,8 @@
 #include <QFileDialog>
 #include <QGraphicsOpacityEffect>
 #include <QMessageBox>
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
 #include <QProcess>
 #include <QPropertyAnimation>
 #include <QSettings>
@@ -33,29 +35,24 @@ public slots:
   void setTranslation(QString translation, QString uuid);
 private slots:
   void on_twitter_clicked();
-
   void on_facebook_clicked();
   void on_text_clicked();
   void on_email_clicked();
+  void on_pastebin_clicked();
+  void on_download_clicked();
+  void pastebin_network_finished(QNetworkReply *reply);
+  void ffmpeg_finished(int k);
 
   QString getFileNameFromString(QString string);
-
   void showStatus(QString message);
-  void pastebin_it_finished(int k);
-  void on_pastebin_clicked();
   bool saveFile(QString filename);
-  void pastebin_it_facebook_finished(int k);
-  void on_download_clicked();
-
-  void ffmpeg_finished(int k);
   void concat(QString currentDownloadDir);
 
 private:
   Ui::Share *ui;
   QSettings settings;
   QProcess *ffmpeg = nullptr;
-  QProcess *pastebin_it = nullptr;
-  QProcess *pastebin_it_facebook = nullptr;
+  QNetworkAccessManager *networkManager = nullptr;
   QString translationUUID;
   TranslationDownloader *td = nullptr;
   QString cacheDirToDelete;

@@ -6,12 +6,9 @@
 Share::Share(QWidget *parent) : QWidget(parent), ui(new Ui::Share) {
   ui->setupUi(this);
   ffmpeg = new QProcess(this);
-  pastebin_it = new QProcess(this);
-  pastebin_it_facebook = new QProcess(this);
-  connect(this->pastebin_it, SIGNAL(finished(int)), this,
-          SLOT(pastebin_it_finished(int)));
-  connect(this->pastebin_it_facebook, SIGNAL(finished(int)), this,
-          SLOT(pastebin_it_facebook_finished(int)));
+  networkManager = new QNetworkAccessManager(this);
+  connect(this->networkManager, SIGNAL(finished(QNetworkReply*)), this,
+          SLOT(pastebin_network_finished(QNetworkReply*)));
   connect(this->ffmpeg, SIGNAL(finished(int)), this,
           SLOT(ffmpeg_finished(int)));
 }
@@ -26,9 +23,8 @@ Share::~Share() { delete ui; }
 void Share::on_twitter_clicked() {
   showStatus("<span style='color:green'>Share: </span>opening web-browser...");
   bool opened = QDesktopServices::openUrl(
-      QUrl(QUrl("https://twitter.com/intent/tweet?text=" +
-                ui->translation->toPlainText()))
-          .toString(QUrl::FullyEncoded));
+      QUrl("https://x.com/intent/tweet?text=" +
+           QUrl::toPercentEncoding(ui->translation->toPlainText())));
   if (!opened) {
     showStatus("<span style='color:red'>Share: </span>unable to open a "
                "web-browser...");
@@ -36,20 +32,15 @@ void Share::on_twitter_clicked() {
 }
 
 void Share::on_facebook_clicked() {
-  QString encoded =
-      QUrl(ui->translation->toPlainText()).toString(QUrl::FullyEncoded);
-  QString o = "wget -O - --post-data=\""
-              "sprunge=" +
-              encoded + "\" http://sprunge.us";
-  pastebin_it_facebook->start("bash", QStringList() << "-c" << o);
-  ui->facebook->setDisabled(true);
-  if (pastebin_it_facebook->waitForStarted(1000)) {
-    showStatus("<span style='color:green'>Share: </span>Prepearing facebook "
-               "share please wait...");
-  } else {
-    showStatus("<span style='color:red'>Share: </span>Failure.<br>");
-  }
-}
+   showStatus("<span style='color:green'>Share: </span>opening web-browser...");
+   bool opened = QDesktopServices::openUrl(
+       QUrl("https://www.facebook.com/sharer/sharer.php?quote=" +
+            QUrl::toPercentEncoding(ui->translation->toPlainText())));
+   if (!opened) {
+     showStatus("<span style='color:red'>Share: </span>unable to open a "
+                "web-browser...");
+   }
+ }
 
 QString Share::getFileNameFromString(QString string) {
   QString filename;
@@ -106,22 +97,26 @@ void Share::on_email_clicked() {
 }
 
 void Share::on_pastebin_clicked() {
-  // QString encoded =
-  // QUrl(ui->translation->toPlainText()).toString(QUrl::FullyEncoded);
-  QString o = "wget -O - --post-data=\""
-              "sprunge=" +
-              ui->translation->toPlainText().toHtmlEscaped() +
-              "\" http://sprunge.us";
-  pastebin_it->start("bash", QStringList() << "-c" << o);
-  showStatus("<span style='color:red'>Share: </span>Prepearing facebook share "
-             "please wait...");
-  ui->pastebin->setDisabled(true);
-  if (pastebin_it->waitForStarted(1000)) {
-    showStatus("<span style='color:green'>Share: </span>Uploading paste please "
-               "wait...<br>");
-  } else {
-    showStatus("<span style='color:red'>Share: </span>Failure.<br>");
-  }
+   // Prepare multipart form data for termbin.com
+   QString text = ui->translation->toPlainText();
+
+   QHttpMultiPart *multiPart = new QHttpMultiPart(QHttpMultiPart::FormDataType);
+
+   QHttpPart textPart;
+   textPart.setHeader(QNetworkRequest::ContentDispositionHeader,
+                     QVariant("form-data; name=\"clbin\""));
+   textPart.setBody(text.toUtf8());
+   multiPart->append(textPart);
+
+   // Create network request
+   QNetworkRequest request(QUrl("https://termbin.com"));
+
+   // Send POST request
+   QNetworkReply *reply = networkManager->post(request, multiPart);
+   multiPart->setParent(reply); // Delete multipart when reply is deleted
+
+   showStatus("<span style='color:green'>Share: </span>Uploading paste please wait...");
+   ui->pastebin->setDisabled(true);
 }
 
 // not being used as we are not saving file now to share.
@@ -147,39 +142,30 @@ bool Share::saveFile(QString filename) {
   return true;
 }
 
-void Share::pastebin_it_finished(int k) {
-  if (k == 0) {
-    QString url = pastebin_it->readAll().trimmed().simplified();
-    showStatus("<span style='color:green'>Share: </span>Pastebin link - <a "
-               "target='_blank' href='" +
-               url + "'>" + url + "</a>");
-    ui->pastebin->setDisabled(false);
-  } else {
-    showStatus("<span style='color:red'>" +
-               pastebin_it->readAllStandardError() + "</span><br>");
-    ui->pastebin->setDisabled(false);
-  }
+void Share::pastebin_network_finished(QNetworkReply *reply) {
+   if (reply->error() == QNetworkReply::NoError) {
+     // Read the response which contains the URL
+     QString url = QString::fromUtf8(reply->readAll()).trimmed();
+
+     // termbin.com returns just the URL
+     if (!url.startsWith("http")) {
+       url = "https://termbin.com/" + url;
+     }
+
+     showStatus("<span style='color:green'>Share: </span>Pastebin link - <a "
+                "target='_blank' href='" +
+                url + "'>" + url + "</a>");
+   } else {
+     // Show error message
+     showStatus("<span style='color:red'>Share: </span>Error: " +
+                reply->errorString() + " - " +
+                QString::fromUtf8(reply->readAll()) + "</span><br>");
+   }
+
+   ui->pastebin->setDisabled(false);
+   reply->deleteLater();
 }
 
-void Share::pastebin_it_facebook_finished(int k) {
-  if (k == 0) {
-    QString url = pastebin_it_facebook->readAll();
-    showStatus("<span style='color:green'>Share: </span>opening web-browser "
-               "with url - https://www.facebook.com/sharer/sharer.php?u=" +
-               url);
-    ui->facebook->setDisabled(false);
-    bool opened = QDesktopServices::openUrl(
-        QUrl("https://www.facebook.com/sharer/sharer.php?u=" + url));
-    if (!opened) {
-      showStatus("<span style='color:red'>Share: </span>unable to open a "
-                 "web-browser...");
-    }
-  } else {
-    showStatus("<span style='color:red'>" +
-               pastebin_it_facebook->readAllStandardError() + "</span><br>");
-    ui->facebook->setDisabled(false);
-  }
-}
 
 void Share::showStatus(QString message) {
   QGraphicsOpacityEffect *eff = new QGraphicsOpacityEffect(this);

@@ -47,10 +47,10 @@ void Slider::start() {
 
 void Slider::loadSlides() {
   for (int i = 0; i < total; i++) {
-    QFile file(":/slides/" + QString::number(i) + ".html");
-    file.open(QIODevice::ReadOnly);
-    createSlide(file.readAll(), i);
-    file.close();
+    if (QFile file(":/slides/" + QString::number(i) + ".html"); file.open(QIODevice::ReadOnly)) {
+      createSlide(file.readAll(), i);
+      file.close();
+    }
   }
 }
 
