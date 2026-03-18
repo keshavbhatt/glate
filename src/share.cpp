@@ -6,9 +6,7 @@
 Share::Share(QWidget *parent) : QWidget(parent), ui(new Ui::Share) {
   ui->setupUi(this);
   ffmpeg = new QProcess(this);
-  networkManager = new QNetworkAccessManager(this);
-  connect(this->networkManager, SIGNAL(finished(QNetworkReply*)), this,
-          SLOT(pastebin_network_finished(QNetworkReply*)));
+  m_networkManager = new QNetworkAccessManager(this);
   connect(this->ffmpeg, SIGNAL(finished(int)), this,
           SLOT(ffmpeg_finished(int)));
 }
@@ -97,26 +95,35 @@ void Share::on_email_clicked() {
 }
 
 void Share::on_pastebin_clicked() {
-   // Prepare multipart form data for termbin.com
-   QString text = ui->translation->toPlainText();
+  const QString text = ui->translation->toPlainText();
+  if (text.trimmed().isEmpty()) {
+    showStatus("<span style='color:red'>Share: </span>No text to share.");
+    return;
+  }
 
-   QHttpMultiPart *multiPart = new QHttpMultiPart(QHttpMultiPart::FormDataType);
+  ui->pastebin->setDisabled(true);
+  showStatus("<span style='color:green'>Share: </span>Uploading paste please wait...");
 
-   QHttpPart textPart;
-   textPart.setHeader(QNetworkRequest::ContentDispositionHeader,
-                     QVariant("form-data; name=\"clbin\""));
-   textPart.setBody(text.toUtf8());
-   multiPart->append(textPart);
+  QNetworkRequest request(QUrl("https://paste.rs"));
+  request.setHeader(QNetworkRequest::ContentTypeHeader,
+                    "text/plain; charset=utf-8");
 
-   // Create network request
-   QNetworkRequest request(QUrl("https://termbin.com"));
-
-   // Send POST request
-   QNetworkReply *reply = networkManager->post(request, multiPart);
-   multiPart->setParent(reply); // Delete multipart when reply is deleted
-
-   showStatus("<span style='color:green'>Share: </span>Uploading paste please wait...");
-   ui->pastebin->setDisabled(true);
+  QNetworkReply *reply = m_networkManager->post(request, text.toUtf8());
+  connect(reply, &QNetworkReply::finished, this, [this, reply]() {
+    const QString body = QString::fromUtf8(reply->readAll()).trimmed();
+    if (reply->error() == QNetworkReply::NoError &&
+        (body.startsWith("http://") || body.startsWith("https://"))) {
+      showStatus("<span style='color:green'>Share: </span>Pastebin link - <a target='_blank' href='" +
+                 body + "'>" + body + "</a>");
+    } else {
+      const QString err =
+          reply->error() == QNetworkReply::NoError ? body : reply->errorString();
+      showStatus("<span style='color:red'>Share: </span>Upload failed. Response: " +
+                 err.toHtmlEscaped());
+    }
+    ui->pastebin->setDisabled(false);
+    reply->deleteLater();
+  });
 }
 
 // not being used as we are not saving file now to share.
@@ -140,30 +147,6 @@ bool Share::saveFile(QString filename) {
 #endif
   file.close();
   return true;
-}
-
-void Share::pastebin_network_finished(QNetworkReply *reply) {
-   if (reply->error() == QNetworkReply::NoError) {
-     // Read the response which contains the URL
-     QString url = QString::fromUtf8(reply->readAll()).trimmed();
-
-     // termbin.com returns just the URL
-     if (!url.startsWith("http")) {
-       url = "https://termbin.com/" + url;
-     }
-
-     showStatus("<span style='color:green'>Share: </span>Pastebin link - <a "
-                "target='_blank' href='" +
-                url + "'>" + url + "</a>");
-   } else {
-     // Show error message
-     showStatus("<span style='color:red'>Share: </span>Error: " +
-                reply->errorString() + " - " +
-                QString::fromUtf8(reply->readAll()) + "</span><br>");
-   }
-
-   ui->pastebin->setDisabled(false);
-   reply->deleteLater();
 }
 
 

@@ -40,7 +40,6 @@ private slots:
   void on_email_clicked();
   void on_pastebin_clicked();
   void on_download_clicked();
-  void pastebin_network_finished(QNetworkReply *reply);
   void ffmpeg_finished(int k);
 
   QString getFileNameFromString(QString string);
@@ -52,7 +51,7 @@ private:
   Ui::Share *ui;
   QSettings settings;
   QProcess *ffmpeg = nullptr;
-  QNetworkAccessManager *networkManager = nullptr;
+  QNetworkAccessManager *m_networkManager = nullptr;
   QString translationUUID;
   TranslationDownloader *td = nullptr;
   QString cacheDirToDelete;
