@@ -1,7 +1,6 @@
 #ifndef SETTINGS_H
 #define SETTINGS_H
 
-#include <QDesktopServices>
 #include <QHotkey>
 #include <QProcess>
 #include <QSettings>
@@ -30,11 +29,11 @@ private slots:
   void setShortcut(const QKeySequence &sequence);
 
   void readSettings();
-  void on_github_clicked();
+  static void on_github_clicked();
 
-  void on_rate_clicked();
+  static void on_rate_clicked();
 
-  void on_donate_clicked();
+  static void on_donate_clicked();
 
   void on_dark_toggled(bool checked);
 

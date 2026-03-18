@@ -3,16 +3,28 @@
 
 #include "utils.h"
 
+#include <QFileDialog>
+#include <QGraphicsOpacityEffect>
+#include <QMessageBox>
+
 Share::Share(QWidget *parent) : QWidget(parent), ui(new Ui::Share) {
   ui->setupUi(this);
   ffmpeg = new QProcess(this);
   m_networkManager = new QNetworkAccessManager(this);
+  ui->voiceGender->setCurrentIndex(
+      settings.value("shareAudioVoiceGender", 0).toInt());
+  connect(ui->voiceGender, &QComboBox::currentIndexChanged, this,
+          [=](int index) {
+            settings.setValue("shareAudioVoiceGender", index);
+          });
   connect(this->ffmpeg, SIGNAL(finished(int)), this,
           SLOT(ffmpeg_finished(int)));
 }
 
 void Share::setTranslation(QString translation, QString uuid) {
   ui->translation->setPlainText(translation);
+  ui->voiceGender->setCurrentIndex(
+      settings.value("shareAudioVoiceGender", 0).toInt());
   translationUUID = uuid;
 }
 
@@ -152,6 +164,13 @@ void Share::on_download_clicked() {
   // destroy uuid and file on close.
 
   QString text = ui->translation->toPlainText();
+  const QString selectedGender =
+      settings.value("shareAudioVoiceGender", ui->voiceGender->currentIndex())
+                  .toInt() == 1
+          ? "male"
+          : "female";
+  showStatus("<span style='color:green'>Share: </span>Preparing " +
+             selectedGender + " voice download...");
   QStringList src1Parts;
   QList<QUrl> urls;
   if (utils::splitString(text, 1400, src1Parts)) {
@@ -161,6 +180,7 @@ void Share::on_download_clicked() {
       QUrlQuery params;
       params.addQueryItem("ie", "UTF-8");
       params.addQueryItem("lang", "hi");
+      params.addQueryItem("gender", selectedGender);
       params.addQueryItem("text",
                           QUrl::toPercentEncoding(src1Parts.at(i).toUtf8()));
       url.setQuery(params);

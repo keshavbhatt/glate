@@ -1,28 +1,12 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
-#include <QClipboard>
-#include <QDebug>
-#include <QFile>
-#include <QHotkey>
-#include <QJsonArray>
-#include <QJsonDocument>
-#include <QJsonObject>
 #include <QKeyEvent>
-#include <QKeySequence>
 #include <QMainWindow>
 #include <QAudioOutput>
 #include <QMediaPlayer>
-#include <QMessageBox>
-#include <QMimeData>
-#include <QPushButton>
-#include <QScreen>
 #include <QScrollBar>
-#include <QSettings>
-#include <QShortcut>
 #include <QTextEdit>
-#include <QTimer>
-#include <QVariant>
 
 #include "controlbutton.h"
 #include "error.h"
@@ -34,7 +18,6 @@
 #include "slider.h"
 #include "systemtraymanager.h"
 #include "ui_textoptionform.h"
-#include "utils.h"
 #include "waitingspinnerwidget.h"
 
 namespace Ui {
@@ -78,12 +61,12 @@ private slots:
   QString getTransLang();
   QString getSourceLang();
   void init_settings();
-  void setStyle(const QString &fname);
+  static void setStyle(const QString &fname);
   void showError(const QString &message);
   void textSelectionChanged(QTextEdit *editor);
   QString getLangName(const QString &langCode);
   QString getLangCode(const QString &langName);
-  void saveByTransId(const QString &translationId, const QString &reply);
+  static void saveByTransId(const QString &translationId, const QString &reply);
   void processTranslation(const QString &reply);
 
 private:

@@ -29,7 +29,7 @@ private slots:
   void on_download_clicked();
   void ffmpeg_finished(int k);
 
-  QString getFileNameFromString(QString string);
+  static QString getFileNameFromString(QString string);
   void showStatus(QString message);
   bool saveFile(QString filename);
   void concat(QString currentDownloadDir);

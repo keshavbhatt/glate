@@ -3,7 +3,6 @@
 #include <QPainter>
 #include <QResizeEvent>
 #include <QString>
-#include <QFont>
 
 // A label that elides its text when not enough geometry is available to show all of the text.
 // Currently only capable of one-line.

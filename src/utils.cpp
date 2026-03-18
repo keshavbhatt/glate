@@ -129,7 +129,7 @@ bool utils::splitString(const QString &str, int m, QStringList &list) {
     QString strPart;
     if (QString(words.join(" ")).length() > m) {
       for (int i = 0; i < words.count(); i++) {
-        if (strPart.count() < m) {
+        if (strPart.length() < m) {
           strPart.append(words.at(i) + " ");
           words.removeAt(i);
           --i;

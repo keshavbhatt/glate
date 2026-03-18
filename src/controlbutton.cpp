@@ -1,6 +1,5 @@
 #include "controlbutton.h"
 #include <QToolTip>
-#include <QEvent>
 #include <QMouseEvent>
 
 controlButton::controlButton(QWidget *parent)

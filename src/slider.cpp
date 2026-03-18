@@ -1,4 +1,8 @@
 #include "slider.h"
+
+#include <QDesktopServices>
+#include <QFile>
+
 #include "ui_slider.h"
 #include <QShortcut>
 

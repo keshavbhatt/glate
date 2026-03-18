@@ -1,7 +1,6 @@
 #ifndef CONTROLBUTTON_H
 #define CONTROLBUTTON_H
 
-#include <QObject>
 #include <QPushButton>
 
 class controlButton : public QPushButton {

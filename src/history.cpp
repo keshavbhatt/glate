@@ -1,7 +1,6 @@
 #include "history.h"
 #include "ui_history.h"
 #include "utils.h"
-#include <QDateTime>
 #include <QDir>
 
 History::History(QWidget *parent) : QWidget(parent), ui(new Ui::History) {
@@ -111,17 +110,31 @@ void History::save(QStringList meta, QString translationId) {
 
 QJsonDocument History::loadJson(QString fileName) {
   QFile jsonFile(fileName);
-  jsonFile.open(QFile::ReadOnly);
-  QByteArray data = jsonFile.readAll();
-  jsonFile.close();
-  return QJsonDocument().fromJson(data);
+  if (!jsonFile.open(QIODevice::ReadOnly)) {
+    return QJsonDocument();
+  }
+
+  QJsonParseError parseError;
+  const QByteArray data = jsonFile.readAll();
+  const QJsonDocument document = QJsonDocument::fromJson(data, &parseError);
+
+  if (parseError.error != QJsonParseError::NoError) {
+    return QJsonDocument();
+  }
+
+  return document;
 }
 
 void History::saveJson(QJsonDocument document, QString fileName) {
   QFile jsonFile(fileName);
-  jsonFile.open(QFile::WriteOnly);
-  jsonFile.write(document.toJson());
-  jsonFile.close();
+  if (!jsonFile.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+    return;
+  }
+
+  const qint64 written = jsonFile.write(document.toJson(QJsonDocument::Compact));
+  if (written < 0) {
+    return;
+  }
 }
 
 void History::loadHistory() {

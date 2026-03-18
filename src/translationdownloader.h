@@ -1,7 +1,6 @@
 #ifndef TRANSLATIONDOWNLOADER_H
 #define TRANSLATIONDOWNLOADER_H
 
-#include <QObject>
 #include <QtNetwork>
 
 class TranslationDownloader : public QObject {

@@ -45,6 +45,13 @@
           </property>
          </widget>
         </item>
+        <item row="2" column="0">
+         <widget class="QLabel" name="voiceLabel">
+          <property name="text">
+           <string>Voice</string>
+          </property>
+         </widget>
+        </item>
         <item row="0" column="1">
          <widget class="QKeySequenceEdit" name="keySequenceEdit"/>
         </item>
@@ -65,6 +72,20 @@
            </widget>
           </item>
          </layout>
+        </item>
+        <item row="2" column="1">
+         <widget class="QComboBox" name="voiceGenderGlobal">
+          <item>
+           <property name="text">
+            <string>Female (Default)</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Male</string>
+           </property>
+          </item>
+         </widget>
         </item>
        </layout>
       </item>

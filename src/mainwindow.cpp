@@ -1,5 +1,9 @@
 #include "mainwindow.h"
+
+#include <QShortcut>
+
 #include "ui_mainwindow.h"
+#include "utils.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow) {
@@ -140,6 +144,8 @@ MainWindow::MainWindow(QWidget *parent)
                   m_player->property("tts_queue").toStringList();
               int ttsIndex = m_player->property("tts_index").toInt();
               const QString ttsLang = m_player->property("tts_lang").toString();
+              const QString ttsGender =
+                  m_player->property("tts_gender").toString();
 
               if (!ttsQueue.isEmpty() && ttsIndex + 1 < ttsQueue.size()) {
                 ++ttsIndex;
@@ -149,6 +155,7 @@ MainWindow::MainWindow(QWidget *parent)
                 QUrlQuery params;
                 params.addQueryItem("ie", "UTF-8");
                 params.addQueryItem("lang", ttsLang);
+                params.addQueryItem("gender", ttsGender);
                 params.addQueryItem("text", ttsQueue.at(ttsIndex));
                 url.setQuery(params);
 
@@ -160,6 +167,7 @@ MainWindow::MainWindow(QWidget *parent)
               m_player->setProperty("tts_queue", QStringList());
               m_player->setProperty("tts_index", -1);
               m_player->setProperty("tts_lang", QString());
+              m_player->setProperty("tts_gender", QString());
             }
 
             QPushButton *playBtn = this->findChild<QPushButton *>(
@@ -179,7 +187,7 @@ MainWindow::MainWindow(QWidget *parent)
   ui->counter->setText("5000/5000");
   int minWid =
       ui->counter->fontMetrics().boundingRect(ui->counter->text()).width();
-  ui->counter->setText(QString::number(ui->src1->toPlainText().count()) +
+  ui->counter->setText(QString::number(ui->src1->toPlainText().length()) +
                        "/5000");
 
   ui->counter->setMinimumWidth(minWid);
@@ -495,8 +503,18 @@ void MainWindow::translate_clicked() {
 void MainWindow::saveByTransId(const QString &translationId,
                                const QString &reply) {
   QFile jsonFile(utils::returnPath("cache") + "/" + translationId + ".glate");
-  jsonFile.open(QFile::WriteOnly);
-  jsonFile.write(reply.toUtf8());
+  if (!jsonFile.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+    qWarning() << "Unable to open cache file for writing:" << jsonFile.fileName()
+               << jsonFile.errorString();
+    return;
+  }
+
+  const qint64 written = jsonFile.write(reply.toUtf8());
+  if (written < 0) {
+    qWarning() << "Unable to write cache file:" << jsonFile.fileName()
+               << jsonFile.errorString();
+  }
+
   jsonFile.close();
 }
 
@@ -621,6 +639,8 @@ void MainWindow::on_lang2_currentIndexChanged(int index) {
 }
 
 void MainWindow::on_play2_clicked() {
+  const QString voiceGender =
+      m_settings.value("voiceGender", 0).toInt() == 1 ? "male" : "female";
   bool player1Playing =
       m_player->objectName().split("_").last() == "play1" &&
       m_player->playbackState() == QMediaPlayer::PlayingState;
@@ -645,11 +665,13 @@ void MainWindow::on_play2_clicked() {
     m_player->setProperty("tts_queue", src2Parts);
     m_player->setProperty("tts_index", 0);
     m_player->setProperty("tts_lang", getTransLang());
+    m_player->setProperty("tts_gender", voiceGender);
 
     QUrl url("https://www.google.com/speech-api/v1/synthesize");
     QUrlQuery params;
     params.addQueryItem("ie", "UTF-8");
     params.addQueryItem("lang", getTransLang());
+    params.addQueryItem("gender", voiceGender);
     params.addQueryItem("text", src2Parts.first());
     url.setQuery(params);
     m_player->setSource(url);
@@ -669,6 +691,8 @@ void MainWindow::on_play2_clicked() {
 }
 
 void MainWindow::on_play1_clicked() {
+  const QString voiceGender =
+      m_settings.value("voiceGender", 0).toInt() == 1 ? "male" : "female";
   bool player2Playing =
       m_player->objectName().split("_").last() == "play2" &&
       m_player->playbackState() == QMediaPlayer::PlayingState;
@@ -694,11 +718,13 @@ void MainWindow::on_play1_clicked() {
     m_player->setProperty("tts_queue", src1Parts);
     m_player->setProperty("tts_index", 0);
     m_player->setProperty("tts_lang", getSourceLang());
+    m_player->setProperty("tts_gender", voiceGender);
 
     QUrl url("https://www.google.com/speech-api/v1/synthesize");
     QUrlQuery params;
     params.addQueryItem("ie", "UTF-8");
     params.addQueryItem("lang", getSourceLang());
+    params.addQueryItem("gender", voiceGender);
     params.addQueryItem("text", src1Parts.first());
     url.setQuery(params);
     m_player->setSource(url);
@@ -718,9 +744,9 @@ void MainWindow::on_play1_clicked() {
 }
 
 void MainWindow::on_src1_textChanged() {
-  ui->counter->setText(QString::number(ui->src1->toPlainText().count()) +
+  ui->counter->setText(QString::number(ui->src1->toPlainText().length()) +
                        "/5000");
-  if (ui->src1->toPlainText().count() > 5000) {
+  if (ui->src1->toPlainText().length() > 5000) {
     int diff = ui->src1->toPlainText().length() - 5000;
     QString newStr = ui->src1->toPlainText();
     newStr.chop(diff);
@@ -789,13 +815,17 @@ void MainWindow::on_lineByline_clicked() {
                               getLangName(getTransLang()), m_translationId);
       } else {
         // load translation from cache;
-        QFile jsonFile(utils::returnPath("cache") + "/" + m_translationId +
-                       ".glate");
-        jsonFile.open(QFile::ReadOnly);
+        QFile jsonFile(utils::returnPath("cache") + "/" + m_translationId + ".glate");
+        if (!jsonFile.open(QFile::ReadOnly)) {
+          showError("Unable to open cached translation file.");
+          return;
+        }
+
         m_currentTranslationData.clear();
-        processTranslation(jsonFile.readAll());
-        m_lineByLine->setData(m_currentTranslationData,
-                              getLangName(getSourceLang()),
+        processTranslation(QString::fromUtf8(jsonFile.readAll()));
+        jsonFile.close();
+
+        m_lineByLine->setData(m_currentTranslationData, getLangName(getSourceLang()),
                               getLangName(getTransLang()), m_translationId);
       }
     }

@@ -1,7 +1,6 @@
 #ifndef SYSTEMTRAYMANAGER_H
 #define SYSTEMTRAYMANAGER_H
 
-#include <QAction>
 #include <QApplication>
 #include <QMenu>
 #include <QMessageBox>
@@ -33,7 +32,7 @@ private slots:
 
   void hideMainWindow();
 
-  void quitApplication();
+  static void quitApplication();
 };
 
 #endif // SYSTEMTRAYMANAGER_H

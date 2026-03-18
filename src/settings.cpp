@@ -1,4 +1,7 @@
 #include "settings.h"
+
+#include <QDesktopServices>
+
 #include "ui_settings.h"
 
 #include <QGuiApplication>
@@ -11,6 +14,9 @@ Settings::Settings(QWidget *parent, QHotkey *hotKey)
   m_hotkeySupported = !platform.contains("wayland");
 
   readSettings();
+
+  connect(ui->voiceGenderGlobal, &QComboBox::currentIndexChanged, this,
+          [=](int index) { settings.setValue("voiceGender", index); });
 
   if (m_hotkeySupported && this->nativeHotkey != nullptr) {
     connect(this->nativeHotkey, &QHotkey::activated, this,
@@ -99,6 +105,10 @@ void Settings::readSettings() {
       ui->quickResultCheckBox->setChecked(true);
     }
   }
+
+  // global TTS voice preference
+  ui->voiceGenderGlobal->setCurrentIndex(
+      settings.value("voiceGender", 0).toInt());
 }
 
 void Settings::get_selected_word_fromX11() {
