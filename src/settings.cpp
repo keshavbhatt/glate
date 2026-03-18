@@ -1,22 +1,50 @@
 #include "settings.h"
 #include "ui_settings.h"
 
+#include <QGuiApplication>
+
 Settings::Settings(QWidget *parent, QHotkey *hotKey)
     : QWidget(parent), ui(new Ui::Settings) {
   ui->setupUi(this);
   this->nativeHotkey = hotKey;
+  const QString platform = QGuiApplication::platformName().toLower();
+  m_hotkeySupported = !platform.contains("wayland");
+
   readSettings();
-  connect(this->nativeHotkey, &QHotkey::activated, this,
-          &Settings::get_selected_word_fromX11);
 
-  connect(ui->quickResultCheckBox, &QCheckBox::toggled, this->nativeHotkey,
-          &QHotkey::setRegistered);
+  if (m_hotkeySupported && this->nativeHotkey != nullptr) {
+    connect(this->nativeHotkey, &QHotkey::activated, this,
+            &Settings::get_selected_word_fromX11);
 
-  connect(ui->keySequenceEdit, &QKeySequenceEdit::keySequenceChanged, this,
-          &Settings::setShortcut);
+    connect(ui->quickResultCheckBox, &QCheckBox::toggled, this->nativeHotkey,
+            &QHotkey::setRegistered);
+
+    connect(ui->keySequenceEdit, &QKeySequenceEdit::keySequenceChanged, this,
+            &Settings::setShortcut);
+  }
+
+  if (!m_hotkeySupported) {
+    const QString unsupportedTooltip =
+        tr("Global shortcuts are unavailable on native Wayland sessions.");
+    ui->quickResultCheckBox->setChecked(false);
+    ui->quickResultCheckBox->setEnabled(false);
+    ui->quickResultCheckBox->setText(tr("Quick Translate (unavailable)"));
+    ui->quickResultCheckBox->setToolTip(unsupportedTooltip);
+    ui->keySequenceEdit->setEnabled(false);
+    ui->keySequenceEdit->setToolTip(unsupportedTooltip);
+    settings.setValue("quicktrans", false);
+    if (this->nativeHotkey != nullptr)
+      this->nativeHotkey->setRegistered(false);
+  }
 
   ui->dark->setChecked(settings.value("theme", "dark").toString() == "dark");
   ui->light->setChecked(settings.value("theme").toString() == "light");
+
+  const QString hotkeyNote =
+      m_hotkeySupported
+          ? QString()
+          : tr("<p align=\"center\"><span><b>Note:</b> Global shortcuts are "
+               "not available on native Wayland sessions.</span></p>");
 
   QString aboutTxt =
       R"(<p align="center"> <span style="font-weight: bold;">Glate</span></p>
@@ -25,15 +53,18 @@ Settings::Settings(QWidget *parent, QHotkey *hotKey)
          <span> &lt;keshavnrj@gmail.com&gt;</span></p>
          <p align="center"><span>Website: https://ktechpit.com</span></p>
          <p align="center"><span>Runtime: %1</span></p>
-         <p align="center"><span>Version: %2</span></p>)";
+         <p align="center"><span>Version: %2</span></p>
+         %3)";
 
   ui->aboutTextBrowser->setText(
-      aboutTxt.arg(qVersion(), qApp->applicationVersion()));
+      aboutTxt.arg(qVersion(), qApp->applicationVersion(), hotkeyNote));
 }
 
 Settings::~Settings() { delete ui; }
 
 void Settings::setShortcut(const QKeySequence &sequence) {
+  if (!m_hotkeySupported || this->nativeHotkey == nullptr)
+    return;
   this->nativeHotkey->setShortcut(sequence,
                                   ui->quickResultCheckBox->isChecked());
   // save quick trans shortcut instanty
@@ -55,14 +86,18 @@ void Settings::readSettings() {
     QKeySequence k =
         QKeySequence(settings.value("quicktrans_shortcut").toString());
     ui->keySequenceEdit->setKeySequence(k);
-    this->nativeHotkey->setShortcut(k.toString(),
-                                    settings.value("quicktrans").toBool());
+    if (m_hotkeySupported && this->nativeHotkey != nullptr) {
+      this->nativeHotkey->setShortcut(k.toString(),
+                                      settings.value("quicktrans").toBool());
+    }
   } else {
     // default value if value not founds
     QKeySequence k = QKeySequence::fromString(tr("Ctrl+Shift+Space"));
     ui->keySequenceEdit->setKeySequence(k);
-    this->nativeHotkey->setShortcut(k.toString(), true);
-    ui->quickResultCheckBox->setChecked(true);
+    if (m_hotkeySupported && this->nativeHotkey != nullptr) {
+      this->nativeHotkey->setShortcut(k.toString(), true);
+      ui->quickResultCheckBox->setChecked(true);
+    }
   }
 }
 

@@ -282,7 +282,10 @@ void MainWindow::init_settings() {
     setStyle(":/qbreeze/" + m_settings.value("theme", "dark").toString() +
              ".qss");
   });
-  if (m_nativeHotkey->isRegistered() == false) {
+  const QString platform = QGuiApplication::platformName().toLower();
+  const bool hotkeyUnsupported = platform.contains("wayland");
+  if (!hotkeyUnsupported && m_settingsWidget->quickResultCheckBoxChecked() &&
+      m_nativeHotkey->isRegistered() == false) {
     showError("Unable to register Global Hotkey.\nIs another instance of " +
               QApplication::applicationName() +
               "running ?\nIf yes close it and restart the application.");

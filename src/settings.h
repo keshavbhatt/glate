@@ -44,6 +44,7 @@ private:
   Ui::Settings *ui;
   QSettings settings;
   QHotkey *nativeHotkey = nullptr;
+  bool m_hotkeySupported = true;
   QString x11_selected;
 };
 
