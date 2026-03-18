@@ -18,6 +18,10 @@ Settings::Settings(QWidget *parent, QHotkey *hotKey)
   connect(ui->voiceGenderGlobal, &QComboBox::currentIndexChanged, this,
           [=](int index) { settings.setValue("voiceGender", index); });
 
+  connect(ui->closeToTrayCheckBox, &QCheckBox::toggled, this, [=](bool checked) {
+    settings.setValue("closeToTray", checked);
+  });
+
   if (m_hotkeySupported && this->nativeHotkey != nullptr) {
     connect(this->nativeHotkey, &QHotkey::activated, this,
             &Settings::get_selected_word_fromX11);
@@ -109,6 +113,10 @@ void Settings::readSettings() {
   // global TTS voice preference
   ui->voiceGenderGlobal->setCurrentIndex(
       settings.value("voiceGender", 0).toInt());
+
+  // close-to-tray behaviour
+  ui->closeToTrayCheckBox->setChecked(
+      settings.value("closeToTray", true).toBool());
 }
 
 void Settings::get_selected_word_fromX11() {
@@ -134,6 +142,10 @@ void Settings::show_requested_text() { emit translationRequest(x11_selected); }
 
 bool Settings::quickResultCheckBoxChecked() {
   return ui->quickResultCheckBox->isChecked();
+}
+
+bool Settings::closeToTrayEnabled() const {
+  return ui->closeToTrayCheckBox->isChecked();
 }
 
 QKeySequence Settings::keySequenceEditKeySequence() {

@@ -3,7 +3,6 @@
 
 #include <QApplication>
 #include <QMenu>
-#include <QMessageBox>
 #include <QObject>
 #include <QSystemTrayIcon>
 
@@ -11,10 +10,10 @@ class SystemTrayManager : public QObject {
   Q_OBJECT
 public:
   explicit SystemTrayManager(QObject *parent = nullptr);
-
   ~SystemTrayManager();
 
   void updateMenu(bool windowVisible);
+  bool isTrayAvailable() const;
 
 signals:
   void showWindow();
@@ -26,12 +25,12 @@ private:
   QAction *m_showAction = nullptr;
   QAction *m_hideAction = nullptr;
   QAction *m_quitAction = nullptr;
+  bool m_windowVisible = true;
 
 private slots:
   void showMainWindow();
-
   void hideMainWindow();
-
+  void onTrayIconActivated(QSystemTrayIcon::ActivationReason reason);
   static void quitApplication();
 };
 

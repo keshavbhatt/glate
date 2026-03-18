@@ -370,7 +370,6 @@ void MainWindow::resizeFix() {
 void MainWindow::closeEvent(QCloseEvent *event) {
 
   m_settings.setValue("geometry", saveGeometry());
-
   m_settings.setValue("windowState", saveState());
 
   // save quick trans shortcut
@@ -381,9 +380,8 @@ void MainWindow::closeEvent(QCloseEvent *event) {
   m_settings.setValue("quicktrans",
                       m_settingsWidget->quickResultCheckBoxChecked());
 
-  m_trayManager->updateMenu(false);
-
-  if (QSystemTrayIcon::isSystemTrayAvailable()) {
+  if (m_trayManager->isTrayAvailable() && m_settingsWidget->closeToTrayEnabled()) {
+    m_trayManager->updateMenu(false);
     this->hide();
     event->ignore();
     return;
