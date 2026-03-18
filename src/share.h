@@ -21,7 +21,8 @@ public:
   ~Share();
 
 public slots:
-  void setTranslation(QString translation, QString uuid);
+  void setTranslation(QString translation, QString uuid,
+                      QString langCode = QString());
 private slots:
   void on_text_clicked();
   void on_email_clicked();
@@ -40,6 +41,7 @@ private:
   QProcess *ffmpeg = nullptr;
   QNetworkAccessManager *m_networkManager = nullptr;
   QString translationUUID;
+  QString translationLangCode;
   TranslationDownloader *td = nullptr;
   QString cacheDirToDelete;
 };

@@ -22,6 +22,7 @@ signals:
 public slots:
   QKeySequence keySequenceEditKeySequence();
   bool quickResultCheckBoxChecked();
+  bool closeToTrayEnabled() const;
 private slots:
   void get_selected_word_fromX11();
   void set_x11_selection();

@@ -3,13 +3,21 @@
 #include <QDesktopServices>
 
 #include "ui_settings.h"
+#include "utils.h"
 
 #include <QGuiApplication>
+#include <QSystemTrayIcon>
 
 Settings::Settings(QWidget *parent, QHotkey *hotKey)
     : QWidget(parent), ui(new Ui::Settings) {
   ui->setupUi(this);
   this->nativeHotkey = hotKey;
+
+  // Populate voice combo from central voice list
+  ui->voiceGenderGlobal->clear();
+  for (const VoiceOption &v : utils::availableVoices())
+    ui->voiceGenderGlobal->addItem(v.displayName);
+
   const QString platform = QGuiApplication::platformName().toLower();
   m_hotkeySupported = !platform.contains("wayland");
 
@@ -17,6 +25,18 @@ Settings::Settings(QWidget *parent, QHotkey *hotKey)
 
   connect(ui->voiceGenderGlobal, &QComboBox::currentIndexChanged, this,
           [=](int index) { settings.setValue("voiceGender", index); });
+
+  connect(ui->closeToTrayCheckBox, &QCheckBox::toggled, this, [=](bool checked) {
+    settings.setValue("closeToTray", checked);
+  });
+
+  if (!QSystemTrayIcon::isSystemTrayAvailable()) {
+    ui->closeToTrayCheckBox->setChecked(false);
+    ui->closeToTrayCheckBox->setEnabled(false);
+    ui->closeToTrayCheckBox->setToolTip(
+        tr("System tray is not available in this session."));
+    settings.setValue("closeToTray", false);
+  }
 
   if (m_hotkeySupported && this->nativeHotkey != nullptr) {
     connect(this->nativeHotkey, &QHotkey::activated, this,
@@ -109,6 +129,10 @@ void Settings::readSettings() {
   // global TTS voice preference
   ui->voiceGenderGlobal->setCurrentIndex(
       settings.value("voiceGender", 0).toInt());
+
+  // close-to-tray behaviour
+  ui->closeToTrayCheckBox->setChecked(
+      settings.value("closeToTray", true).toBool());
 }
 
 void Settings::get_selected_word_fromX11() {
@@ -134,6 +158,10 @@ void Settings::show_requested_text() { emit translationRequest(x11_selected); }
 
 bool Settings::quickResultCheckBoxChecked() {
   return ui->quickResultCheckBox->isChecked();
+}
+
+bool Settings::closeToTrayEnabled() const {
+  return ui->closeToTrayCheckBox->isChecked();
 }
 
 QKeySequence Settings::keySequenceEditKeySequence() {

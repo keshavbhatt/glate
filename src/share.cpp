@@ -11,6 +11,12 @@ Share::Share(QWidget *parent) : QWidget(parent), ui(new Ui::Share) {
   ui->setupUi(this);
   ffmpeg = new QProcess(this);
   m_networkManager = new QNetworkAccessManager(this);
+
+  // Populate voice combo from central voice list
+  ui->voiceGender->clear();
+  for (const VoiceOption &v : utils::availableVoices())
+    ui->voiceGender->addItem(v.displayName);
+
   ui->voiceGender->setCurrentIndex(
       settings.value("shareAudioVoiceGender", 0).toInt());
   connect(ui->voiceGender, &QComboBox::currentIndexChanged, this,
@@ -21,11 +27,12 @@ Share::Share(QWidget *parent) : QWidget(parent), ui(new Ui::Share) {
           SLOT(ffmpeg_finished(int)));
 }
 
-void Share::setTranslation(QString translation, QString uuid) {
+void Share::setTranslation(QString translation, QString uuid, QString langCode) {
   ui->translation->setPlainText(translation);
   ui->voiceGender->setCurrentIndex(
       settings.value("shareAudioVoiceGender", 0).toInt());
   translationUUID = uuid;
+  translationLangCode = langCode;
 }
 
 Share::~Share() { delete ui; }
@@ -188,13 +195,17 @@ void Share::on_download_clicked() {
   // destroy uuid and file on close.
 
   QString text = ui->translation->toPlainText();
-  const QString selectedGender =
-      settings.value("shareAudioVoiceGender", ui->voiceGender->currentIndex())
-                  .toInt() == 1
-          ? "male"
-          : "female";
+  const int voiceIdx = ui->voiceGender->currentIndex();
+  const auto voices = utils::availableVoices();
+  const VoiceOption &voiceConf =
+      voiceIdx < voices.size() ? voices.at(voiceIdx) : voices.first();
+  const QString selectedGender = voiceConf.gender;
+  const QString ttsLang =
+      voiceConf.langOverride.isEmpty()
+          ? (translationLangCode.isEmpty() ? QString("en") : translationLangCode)
+          : voiceConf.langOverride;
   showStatus("<span style='color:green'>Share: </span>Preparing " +
-             selectedGender + " voice download...");
+             voiceConf.displayName + " voice download...");
   QStringList src1Parts;
   QList<QUrl> urls;
   if (utils::splitString(text, 1400, src1Parts)) {
@@ -203,7 +214,7 @@ void Share::on_download_clicked() {
       QUrl url("https://www.google.com/speech-api/v1/synthesize");
       QUrlQuery params;
       params.addQueryItem("ie", "UTF-8");
-      params.addQueryItem("lang", "hi");
+      params.addQueryItem("lang", ttsLang);
       params.addQueryItem("gender", selectedGender);
       params.addQueryItem("text",
                           QUrl::toPercentEncoding(src1Parts.at(i).toUtf8()));

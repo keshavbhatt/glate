@@ -1,7 +1,10 @@
 #include "utils.h"
 #include <QDateTime>
+#include <QFile>
+#include <QHash>
 #include <QRandomGenerator>
 #include <QRegularExpression>
+#include <QSet>
 
 utils::utils(QObject *parent) : QObject(parent) {}
 
@@ -119,6 +122,62 @@ QString utils::htmlToPlainText(QString str) {
       .replace("&gt;", ">")
       .replace("&lt;", "<")
       .replace("&#39;", "'");
+}
+
+QVector<VoiceOption> utils::availableVoices() {
+  static QVector<VoiceOption> cachedVoices;
+  if (!cachedVoices.isEmpty())
+    return cachedVoices;
+
+  cachedVoices = {
+      {"Female (Default)", "female", ""},
+      {"Male", "male", ""},
+  };
+
+  QHash<QString, QString> codeToName;
+  QFile langFile(":/resources/lang.glate");
+  if (langFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+    while (!langFile.atEnd()) {
+      const QString line = QString::fromUtf8(langFile.readLine()).trimmed();
+      if (line.isEmpty() || !line.contains("<=>"))
+        continue;
+
+      const QStringList parts = line.split("<=>");
+      if (parts.count() < 2)
+        continue;
+
+      const QString displayName = parts.at(0).trimmed();
+      const QString codePart = parts.at(1).trimmed();
+      const QStringList rawCodes =
+          codePart.split(QRegularExpression("\\s+or\\s+"), Qt::SkipEmptyParts);
+      for (const QString &rawCode : rawCodes) {
+        const QString code = rawCode.trimmed();
+        if (!code.isEmpty() && !codeToName.contains(code))
+          codeToName.insert(code, displayName);
+      }
+    }
+    langFile.close();
+  }
+
+  QFile ttsFile(":/resources/tts.glate");
+  QSet<QString> seenCodes;
+  if (ttsFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+    while (!ttsFile.atEnd()) {
+      const QString code = QString::fromUtf8(ttsFile.readLine()).trimmed();
+      if (code.isEmpty() || seenCodes.contains(code))
+        continue;
+
+      seenCodes.insert(code);
+      const QString displayName = codeToName.value(code, code);
+      cachedVoices.append(
+          {displayName + " Female (" + code + ")", "female", code});
+      cachedVoices.append(
+          {displayName + " Male (" + code + ")", "male", code});
+    }
+    ttsFile.close();
+  }
+
+  return cachedVoices;
 }
 
 bool utils::splitString(const QString &str, int m, QStringList &list) {

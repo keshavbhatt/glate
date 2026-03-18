@@ -6,7 +6,7 @@ Website for "The Glate App" - The Google translator and TTS app for Desktop Linu
   <img width="200" height="200" src="https://github.com/keshavbhatt/glate/blob/master/icons/icon-256.png?raw=true">
 </p>
 
-Galte is a neat, simple yet feature rich, Google Translator and Text to speech synthesizer for Linux Desktop Platform.
+Glate is a neat, simple yet feature rich, Google Translator and Text to speech synthesizer for Linux Desktop Platform.
 
 ## Key Features of Glate :
 

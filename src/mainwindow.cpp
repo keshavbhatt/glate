@@ -19,6 +19,10 @@ MainWindow::MainWindow(QWidget *parent)
     this->hide();
     m_trayManager->updateMenu(this->isVisible());
   });
+  connect(m_trayManager, &SystemTrayManager::quitRequested, this, [=]() {
+    m_forceQuit = true;
+    this->close();
+  });
 
   m_trayManager->updateMenu(true);
 
@@ -370,7 +374,6 @@ void MainWindow::resizeFix() {
 void MainWindow::closeEvent(QCloseEvent *event) {
 
   m_settings.setValue("geometry", saveGeometry());
-
   m_settings.setValue("windowState", saveState());
 
   // save quick trans shortcut
@@ -381,13 +384,20 @@ void MainWindow::closeEvent(QCloseEvent *event) {
   m_settings.setValue("quicktrans",
                       m_settingsWidget->quickResultCheckBoxChecked());
 
-  m_trayManager->updateMenu(false);
+  // Use live UI state for this close action, then persist it.
+  const bool closeToTray =
+      m_settingsWidget != nullptr
+          ? m_settingsWidget->closeToTrayEnabled()
+          : m_settings.value("closeToTray", true).toBool();
+  m_settings.setValue("closeToTray", closeToTray);
 
-  if (QSystemTrayIcon::isSystemTrayAvailable()) {
+  if (!m_forceQuit && m_trayManager->isTrayAvailable() && closeToTray) {
+    m_trayManager->updateMenu(false);
     this->hide();
     event->ignore();
     return;
   }
+  qApp->quit();
 
   QMainWindow::closeEvent(event);
 }
@@ -639,14 +649,25 @@ void MainWindow::on_lang2_currentIndexChanged(int index) {
 }
 
 void MainWindow::on_play2_clicked() {
-  const QString voiceGender =
-      m_settings.value("voiceGender", 0).toInt() == 1 ? "male" : "female";
+  const int voiceIdx = m_settings.value("voiceGender", 0).toInt();
+  const auto voices = utils::availableVoices();
+  const VoiceOption &voiceConf =
+      voiceIdx < voices.size() ? voices.at(voiceIdx) : voices.first();
+  const QString voiceGender = voiceConf.gender;
+  const QString ttsLang = voiceConf.langOverride.isEmpty()
+                              ? getTransLang()
+                              : voiceConf.langOverride;
+  // For support check use base lang (e.g. "en" from "en-GB")
+  const QString ttsCheckLang = voiceConf.langOverride.isEmpty()
+                                   ? getTransLang()
+                                   : voiceConf.langOverride.split('-').first();
+
   bool player1Playing =
       m_player->objectName().split("_").last() == "play1" &&
       m_player->playbackState() == QMediaPlayer::PlayingState;
 
   if (m_player->playbackState() != QMediaPlayer::PlayingState) {
-    if (m_supportedTts.contains(getTransLang(), Qt::CaseInsensitive) == false) {
+    if (!m_supportedTts.contains(ttsCheckLang, Qt::CaseInsensitive)) {
       showError("Selected language '" + getTransLang() +
                 "' is not supported by TTS Engine.\nPlease choose different "
                 "Language.");
@@ -664,13 +685,13 @@ void MainWindow::on_play2_clicked() {
 
     m_player->setProperty("tts_queue", src2Parts);
     m_player->setProperty("tts_index", 0);
-    m_player->setProperty("tts_lang", getTransLang());
+    m_player->setProperty("tts_lang", ttsLang);
     m_player->setProperty("tts_gender", voiceGender);
 
     QUrl url("https://www.google.com/speech-api/v1/synthesize");
     QUrlQuery params;
     params.addQueryItem("ie", "UTF-8");
-    params.addQueryItem("lang", getTransLang());
+    params.addQueryItem("lang", ttsLang);
     params.addQueryItem("gender", voiceGender);
     params.addQueryItem("text", src2Parts.first());
     url.setQuery(params);
@@ -691,15 +712,25 @@ void MainWindow::on_play2_clicked() {
 }
 
 void MainWindow::on_play1_clicked() {
-  const QString voiceGender =
-      m_settings.value("voiceGender", 0).toInt() == 1 ? "male" : "female";
+  const int voiceIdx = m_settings.value("voiceGender", 0).toInt();
+  const auto voices = utils::availableVoices();
+  const VoiceOption &voiceConf =
+      voiceIdx < voices.size() ? voices.at(voiceIdx) : voices.first();
+  const QString voiceGender = voiceConf.gender;
+  const QString ttsLang = voiceConf.langOverride.isEmpty()
+                              ? getSourceLang()
+                              : voiceConf.langOverride;
+  // For support check use base lang (e.g. "en" from "en-GB")
+  const QString ttsCheckLang = voiceConf.langOverride.isEmpty()
+                                   ? getSourceLang()
+                                   : voiceConf.langOverride.split('-').first();
+
   bool player2Playing =
       m_player->objectName().split("_").last() == "play2" &&
       m_player->playbackState() == QMediaPlayer::PlayingState;
 
   if (m_player->playbackState() != QMediaPlayer::PlayingState) {
-    if (m_supportedTts.contains(getSourceLang(), Qt::CaseInsensitive) ==
-        false) {
+    if (!m_supportedTts.contains(ttsCheckLang, Qt::CaseInsensitive)) {
       showError("Selected language '" + getSourceLang() +
                 "' is not supported by TTS Engine.\nPlease choose different "
                 "Language.");
@@ -717,13 +748,13 @@ void MainWindow::on_play1_clicked() {
 
     m_player->setProperty("tts_queue", src1Parts);
     m_player->setProperty("tts_index", 0);
-    m_player->setProperty("tts_lang", getSourceLang());
+    m_player->setProperty("tts_lang", ttsLang);
     m_player->setProperty("tts_gender", voiceGender);
 
     QUrl url("https://www.google.com/speech-api/v1/synthesize");
     QUrlQuery params;
     params.addQueryItem("ie", "UTF-8");
-    params.addQueryItem("lang", getSourceLang());
+    params.addQueryItem("lang", ttsLang);
     params.addQueryItem("gender", voiceGender);
     params.addQueryItem("text", src1Parts.first());
     url.setQuery(params);
@@ -771,7 +802,8 @@ void MainWindow::on_copy_clicked() {
 }
 
 void MainWindow::on_share_clicked() {
-  m_share->setTranslation(ui->src2->toPlainText(), m_translationId);
+  m_share->setTranslation(ui->src2->toPlainText(), m_translationId,
+                          getTransLang());
   if (m_share->isVisible() == false) {
     m_share->showNormal();
   }
