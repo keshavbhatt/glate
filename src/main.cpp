@@ -7,7 +7,7 @@ int main(int argc, char *argv[]) {
   QGuiApplication::setDesktopFileName("com.ktechpit.glate");
   QApplication::setApplicationName("Glate");
   QApplication::setOrganizationName("org.keshavnrj.ubuntu");
-  QApplication::setApplicationVersion("3.1");
+  QApplication::setApplicationVersion("4.0");
   MainWindow w;
 
   w.show();

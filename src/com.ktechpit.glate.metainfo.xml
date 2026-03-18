@@ -62,6 +62,20 @@
     <keyword>language</keyword>
   </keywords>
 
+  <releases>
+    <release version="4.0" date="2026-03-18">
+      <description>
+        <p>Packaging and release modernization update.</p>
+        <ul>
+          <li>Aligned desktop metadata with reverse-DNS app id for stores.</li>
+          <li>Updated Snap packaging to core24 with CMake-based builds.</li>
+          <li>Added Flatpak manifest and CI release artifacts.</li>
+          <li>Improved selection theming contrast and paste sharing behavior.</li>
+        </ul>
+      </description>
+    </release>
+  </releases>
+
   <update_contact>98378sub@gmail.com</update_contact>
   <content_rating type="oars-1.1"/>
 </component>

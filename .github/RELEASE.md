@@ -6,9 +6,9 @@ This repository builds release artifacts automatically on tags using `.github/wo
 
 ```bash
 git add .
-git commit -m "Release v3.1.0"
-git tag -a v3.1.0 -m "Release v3.1.0"
-git push origin main v3.1.0
+git commit -m "Release v4.0.0"
+git tag -a v4.0.0 -m "Release v4.0.0"
+git push origin main v4.0.0
 ```
 
 ## Artifacts produced
