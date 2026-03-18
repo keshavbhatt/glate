@@ -109,10 +109,31 @@ install(TARGETS glate
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 
-install(FILES icons/linguist.png
+install(FILES icons/app/icon-64.png
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/64x64/apps/
+    RENAME com.ktechpit.glate.png
+)
+
+install(FILES icons/app/icon-128.png
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/128x128/apps/
+    RENAME com.ktechpit.glate.png
+)
+
+install(FILES icons/app/icon-256.png
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/256x256/apps/
+    RENAME com.ktechpit.glate.png
+)
+
+install(FILES icons/app/icon-512.png
     DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/512x512/apps/
+    RENAME com.ktechpit.glate.png
 )
 
 install(FILES glate.desktop
     DESTINATION ${CMAKE_INSTALL_DATADIR}/applications/
+    RENAME com.ktechpit.glate.desktop
+)
+
+install(FILES com.ktechpit.glate.metainfo.xml
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/metainfo/
 )

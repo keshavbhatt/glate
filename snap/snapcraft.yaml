@@ -1,120 +1,68 @@
 name: glate
 version: '3.1'
-summary: Google translator for Linux Desktop  
+summary: Google translator for Linux desktop
 description: |
-  Powerful google tranlator engine based native translation and TTS app for Linux Desktop.
+  Glate is a desktop translator with text-to-speech support, line-by-line
+  translation, and sharing/export tools.
 
-grade: stable  
+grade: stable
 confinement: strict
 icon: snap/gui/icon.png
-base: core20
+base: core24
 compression: lzo
 
-architectures:
-  - build-on: amd64
-    run-on: amd64  
-
-environment:
-  SNAP_DESKTOP_RUNTIME: $SNAP/qt515-core20
-
-package-repositories:
-  - type: apt
-    formats: [deb]
-    components: [main]
-    suites: [focal]
-    key-id: C65D51784EDC19A871DBDBB710C56D0DE9977759
-    url: https://ppa.launchpadcontent.net/beineri/opt-qt-5.15.2-focal/ubuntu
+platforms:
+  amd64:
+  arm64:
 
 apps:
   glate:
-    command: bin/desktop-launch $SNAP/usr/bin/glate
+    command: usr/bin/glate
+    desktop: usr/share/applications/com.ktechpit.glate.desktop
+    common-id: com.ktechpit.glate
+    extensions:
+      - kde-neon-6
     environment:
-       IS_SNAP: 1
-       QT_QPA_PLATFORMTHEME: gtk3
-       LANG: en_US.UTF-8 # related whatsie issue 7,21
-    desktop: usr/share/applications/glate.desktop
+      IS_SNAP: '1'
     plugs:
-        - desktop
-        - desktop-legacy
-        - gsettings
-        - home
-        - opengl
-        - audio-playback
-        - removable-media
-        - unity7
-        - x11
-        - mount-observe
-        - network
-        - network-control
-        - network-observe
-        - network-bind
-        - wayland
-plugs:
-  gtk-3-themes:
-    interface: content
-    target: $SNAP/data-dir/themes
-    default-provider: gtk-common-themes
-  icon-themes:
-    interface: content
-    target: $SNAP/data-dir/icons
-    default-provider: gtk-common-themes
-  sound-themes:
-    interface: content
-    target: $SNAP/data-dir/sounds
-    default-provider: gtk-common-themes
-  qt515-core20:
-    interface: content
-    target: $SNAP/qt515-core20
-    default-provider: qt515-core20
+      - home
+      - network
+      - opengl
+      - x11
+      - wayland
+      - audio-playback
+      - desktop
+      - desktop-legacy
 
 parts:
-  build-src:
-     plugin: nil
-     source: https://github.com/keshavbhatt/glate.git
-     source-subdir: src/
-     override-build: |
-            snapcraftctl build
+  glate:
+    source: src
+    plugin: cmake
+    build-packages:
+      - libx11-dev
+      - libxcb1-dev
+      - libx11-xcb-dev
+      - pkg-config
+    stage-packages:
+      - ffmpeg
+      - libx11-6
+      - libxcb1
+    cmake-parameters:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DCMAKE_INSTALL_PREFIX=/usr
+    override-build: |
+      craftctl default
 
-            apt install -y build-essential qt515base qt515tools qt515multimedia qt515x11extras qt515xmlpatterns libgl1-mesa-dev
+      mkdir -p ${CRAFT_PART_INSTALL}/meta/gui
+      cp ${CRAFT_PART_INSTALL}/usr/share/icons/hicolor/512x512/apps/com.ktechpit.glate.png \
+         ${CRAFT_PART_INSTALL}/meta/gui/icon.png
 
-            QT_BASE_DIR=/opt/qt515
-            export QTDIR=$QT_BASE_DIR
-            export PATH=$QT_BASE_DIR/bin:$PATH
+      sed -i \
+        "s|^Icon=.*|Icon=${SNAP}/meta/gui/icon.png|" \
+        ${CRAFT_PART_INSTALL}/usr/share/applications/com.ktechpit.glate.desktop
 
-            if [[ $(uname -m) == "x86_64" ]]; then
-              export LD_LIBRARY_PATH=$QT_BASE_DIR/lib/x86_64-linux-gnu:$QT_BASE_DIR/lib:${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}
-            else
-              export LD_LIBRARY_PATH=$QT_BASE_DIR/lib/i386-linux-gnu:$QT_BASE_DIR/lib:${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}
-            fi
-
-            export PKG_CONFIG_PATH=$QT_BASE_DIR/lib/pkgconfig:${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}
-
-            which qmake
-
-            mkdir -p ${SNAPCRAFT_PART_INSTALL}/usr/bin/
-
-            /opt/qt515/bin/qmake src
-
-            make -j4
-
-            /opt/qt515/bin/qmake -install qinstall -exe glate ${SNAPCRAFT_PART_INSTALL}/usr/bin/glate
-
-            strip ${SNAPCRAFT_PART_INSTALL}/usr/bin/glate
-
-
-            sed -i 's|Icon=.*|Icon=${SNAP}/meta/gui/icon.png|g' ${SNAPCRAFT_PART_SRC}/src/glate.desktop
-
-            mkdir -p ${SNAPCRAFT_PART_INSTALL}/usr/share/applications/
-
-            cp -rf ${SNAPCRAFT_PART_SRC}/src/glate.desktop ${SNAPCRAFT_PART_INSTALL}/usr/share/applications/glate.desktop
-
-  desktop-launch:
-     plugin: nil
-     source: https://github.com/keshavbhatt/qt515-core20.git
-     after: [build-src]
-     override-build: |
-            snapcraftctl build
-
-            mkdir -p ${SNAPCRAFT_PART_INSTALL}/bin/
-
-            cp -rf ${SNAPCRAFT_PART_SRC}/snap_launcher/bin/desktop-launch ${SNAPCRAFT_PART_INSTALL}/bin/
+    prime:
+      - -usr/include
+      - -usr/lib/*/cmake
+      - -usr/share/man
+      - -usr/share/lintian

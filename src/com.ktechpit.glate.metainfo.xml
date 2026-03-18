@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>com.ktechpit.glate</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  <name>Glate</name>
+  <summary>Translate text and generate speech audio on Linux desktop</summary>
+
+  <developer id="com.ktechpit">
+    <name>Keshav Bhatt</name>
+  </developer>
+
+  <description>
+    <p>Glate is a desktop translator with built-in text to speech for fast daily translation workflows.</p>
+    <p>It supports language-to-language translation, per-line translation, speech playback, and exporting translated text or speech output.</p>
+    <ul>
+      <li>Translate between 100+ languages</li>
+      <li>Line-by-line translation view for long content</li>
+      <li>Built-in text to speech playback and MP3 export</li>
+      <li>History tracking and quick copy/share actions</li>
+      <li>Dark and light themes</li>
+    </ul>
+  </description>
+
+  <launchable type="desktop-id">com.ktechpit.glate.desktop</launchable>
+  <icon type="stock">com.ktechpit.glate</icon>
+
+  <screenshots>
+    <screenshot type="default">
+      <caption>Main translation view with dark theme</caption>
+      <image>https://raw.githubusercontent.com/keshavbhatt/glate/master/screenshots/1.jpg</image>
+    </screenshot>
+    <screenshot>
+      <caption>Settings and language options</caption>
+      <image>https://raw.githubusercontent.com/keshavbhatt/glate/master/screenshots/2.jpg</image>
+    </screenshot>
+    <screenshot>
+      <caption>Share dialog and export options</caption>
+      <image>https://raw.githubusercontent.com/keshavbhatt/glate/master/screenshots/3.jpg</image>
+    </screenshot>
+  </screenshots>
+
+  <url type="homepage">https://github.com/keshavbhatt/glate</url>
+  <url type="bugtracker">https://github.com/keshavbhatt/glate/issues</url>
+  <url type="vcs-browser">https://github.com/keshavbhatt/glate</url>
+
+  <provides>
+    <binary>glate</binary>
+  </provides>
+
+  <categories>
+    <category>Office</category>
+    <category>Education</category>
+    <category>Utility</category>
+  </categories>
+
+  <keywords>
+    <keyword>translate</keyword>
+    <keyword>translator</keyword>
+    <keyword>speech</keyword>
+    <keyword>tts</keyword>
+    <keyword>language</keyword>
+  </keywords>
+
+  <update_contact>98378sub@gmail.com</update_contact>
+  <content_rating type="oars-1.1"/>
+</component>
+
