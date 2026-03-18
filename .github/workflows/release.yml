@@ -1,0 +1,143 @@
+name: Build and Release Artifacts
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.10.0'
+          host: windows
+          target: desktop
+          arch: win64_msvc2022_64
+          modules: qtmultimedia
+          cache: true
+
+      - name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Build application
+        shell: cmd
+        run: |
+          cmake -S . -B build-win -G "NMake Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=%Qt6_DIR%
+          cmake --build build-win
+
+      - name: Package Windows portable build
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory -Force -Path release | Out-Null
+          Copy-Item "build-win\src\glate.exe" -Destination "release\Glate.exe"
+          Push-Location release
+          windeployqt --release Glate.exe
+          Pop-Location
+          Compress-Archive -Path "release\*" -DestinationPath "Glate-Portable-${{ github.ref_name }}-Win64.zip"
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: glate-windows
+          path: Glate-Portable-${{ github.ref_name }}-Win64.zip
+
+  build-snap:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Build snap
+        id: snapcraft
+        uses: snapcore/action-build@v1
+        with:
+          path: .
+
+      - name: Upload snap artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: glate-snap
+          path: ${{ steps.snapcraft.outputs.snap }}
+
+  build-flatpak:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Install Flatpak toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flatpak flatpak-builder
+          sudo flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+          sudo flatpak install -y flathub org.kde.Sdk//6.8 org.kde.Platform//6.8
+
+      - name: Build Flatpak bundle
+        run: ./build-flatpak.sh
+
+      - name: Upload Flatpak artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: glate-flatpak
+          path: glate.flatpak
+
+  release:
+    runs-on: ubuntu-latest
+    needs:
+      - build-windows
+      - build-snap
+      - build-flatpak
+
+    steps:
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: glate-windows
+          path: release-assets
+
+      - name: Download Snap artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: glate-snap
+          path: release-assets
+
+      - name: Download Flatpak artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: glate-flatpak
+          path: release-assets
+
+      - name: Generate checksums
+        run: |
+          cd release-assets
+          sha256sum * > checksums.txt
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            release-assets/*
+          generate_release_notes: true
+          body: |
+            ## Glate ${{ github.ref_name }}
+
+            Automated release artifacts:
+            - Windows portable build (`Glate-Portable-...-Win64.zip`)
+            - Snap package (`*.snap`)
+            - Flatpak bundle (`glate.flatpak`)
+            - SHA256 checksums (`checksums.txt`)
+

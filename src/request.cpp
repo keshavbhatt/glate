@@ -7,8 +7,8 @@ Request::Request(QObject *parent) : QObject(parent) {
 Request::~Request() {}
 
 void Request::get(const QUrl &url) {
-  QNetworkAccessManager *m_netwManager = new QNetworkAccessManager(this);
-  QNetworkDiskCache *diskCache = new QNetworkDiskCache(this);
+  auto m_netwManager = new QNetworkAccessManager(this);
+  auto diskCache = new QNetworkDiskCache(this);
   diskCache->setCacheDirectory(_cache_path);
   m_netwManager->setCache(diskCache);
   connect(m_netwManager, &QNetworkAccessManager::finished, this,

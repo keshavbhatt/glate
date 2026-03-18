@@ -1,7 +1,6 @@
 #ifndef REQUEST_H
 #define REQUEST_H
 
-#include <QObject>
 #include <QtNetwork>
 
 class Request : public QObject {

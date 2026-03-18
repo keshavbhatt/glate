@@ -1,27 +1,29 @@
 #include "qhotkey.h"
 #include "qhotkey_p.h"
 #include <QDebug>
-#include <QX11Info>
+#include <QGuiApplication>
 #include <QThreadStorage>
 #include <X11/Xlib.h>
 #include <xcb/xcb.h>
 
-//compability to pre Qt 5.8
-#ifndef Q_FALLTHROUGH
-#define Q_FALLTHROUGH() (void)0
-#endif
+static Display *x11Display()
+{
+    if (auto *x11 = qGuiApp->nativeInterface<QNativeInterface::QX11Application>())
+        return x11->display();
+    return nullptr;
+}
 
 class QHotkeyPrivateX11 : public QHotkeyPrivate
 {
 public:
 	// QAbstractNativeEventFilter interface
-	bool nativeEventFilter(const QByteArray &eventType, void *message, long *result) Q_DECL_OVERRIDE;
+	bool nativeEventFilter(const QByteArray &eventType, void *message, qintptr *result) Q_DECL_OVERRIDE;
 
 protected:
 	// QHotkeyPrivate interface
 	quint32 nativeKeycode(Qt::Key keycode, bool &ok) Q_DECL_OVERRIDE;
 	quint32 nativeModifiers(Qt::KeyboardModifiers modifiers, bool &ok) Q_DECL_OVERRIDE;
-	QString getX11String(Qt::Key keycode);
+	static QString getX11String(Qt::Key keycode);
 	bool registerShortcut(QHotkey::NativeShortcut shortcut) Q_DECL_OVERRIDE;
 	bool unregisterShortcut(QHotkey::NativeShortcut shortcut) Q_DECL_OVERRIDE;
 
@@ -50,14 +52,14 @@ NATIVE_INSTANCE(QHotkeyPrivateX11)
 const QVector<quint32> QHotkeyPrivateX11::specialModifiers = {0, Mod2Mask, LockMask, (Mod2Mask | LockMask)};
 const quint32 QHotkeyPrivateX11::validModsMask = ShiftMask | ControlMask | Mod1Mask | Mod4Mask;
 
-bool QHotkeyPrivateX11::nativeEventFilter(const QByteArray &eventType, void *message, long *result)
+bool QHotkeyPrivateX11::nativeEventFilter(const QByteArray &eventType, void *message, qintptr *result)
 {
 	Q_UNUSED(eventType);
 	Q_UNUSED(result);
 
-	xcb_generic_event_t *genericEvent = static_cast<xcb_generic_event_t *>(message);
+	auto genericEvent = static_cast<xcb_generic_event_t *>(message);
 	if (genericEvent->response_type == XCB_KEY_PRESS) {
-		xcb_key_press_event_t *keyEvent = static_cast<xcb_key_press_event_t *>(message);
+		auto keyEvent = static_cast<xcb_key_press_event_t *>(message);
 		this->activateShortcut({keyEvent->detail, keyEvent->state & QHotkeyPrivateX11::validModsMask});
 	}
 
@@ -99,9 +101,9 @@ quint32 QHotkeyPrivateX11::nativeKeycode(Qt::Key keycode, bool &ok)
 			return 0;
 	}
 
-	Display *display = QX11Info::display();
+	Display *display = x11Display();
 	if(display) {
-		auto res = XKeysymToKeycode(QX11Info::display(), keysym);
+		auto res = XKeysymToKeycode(x11Display(), keysym);
 		if(res != 0)
 			ok = true;
 		return res;
@@ -126,7 +128,7 @@ quint32 QHotkeyPrivateX11::nativeModifiers(Qt::KeyboardModifiers modifiers, bool
 
 bool QHotkeyPrivateX11::registerShortcut(QHotkey::NativeShortcut shortcut)
 {
-	Display *display = QX11Info::display();
+	Display *display = x11Display();
 	if(!display)
 		return false;
 
@@ -153,7 +155,7 @@ bool QHotkeyPrivateX11::registerShortcut(QHotkey::NativeShortcut shortcut)
 
 bool QHotkeyPrivateX11::unregisterShortcut(QHotkey::NativeShortcut shortcut)
 {
-	Display *display = QX11Info::display();
+	Display *display = x11Display();
 	if(!display)
 		return false;
 

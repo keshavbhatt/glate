@@ -32,8 +32,8 @@ void TranslationDownloader::start() {
 }
 
 void TranslationDownloader::startDownload(QUrl url) {
-  QNetworkAccessManager *m_netwManager = new QNetworkAccessManager(this);
-  QNetworkDiskCache *diskCache = new QNetworkDiskCache(this);
+  auto m_netwManager = new QNetworkAccessManager(this);
+  auto diskCache = new QNetworkDiskCache(this);
   diskCache->setCacheDirectory(_cache_path);
   m_netwManager->setCache(diskCache);
   connect(m_netwManager, &QNetworkAccessManager::finished,
@@ -44,10 +44,16 @@ void TranslationDownloader::startDownload(QUrl url) {
                   QString::number(total));
               // save to file
               QFile file(currentDownloadDir + "/" + QString::number(current));
-              file.open(QIODevice::WriteOnly);
-              file.write(rep->readAll());
-              file.close();
-              start();
+              if (!file.open(QIODevice::WriteOnly)) {
+                emit downloadError("<span style='color:red;'>Share: </span>"
+                                   "unable to write downloaded part: " +
+                                   QString::number(current + 1) + " (" +
+                                   file.errorString() + ")");
+              } else {
+                file.write(rep->readAll());
+                file.close();
+                start();
+              }
             } else {
               emit downloadError("<span style='color:red;'>Share: "
                                  "</span>downloaded error on part: " +

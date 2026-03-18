@@ -3,53 +3,33 @@
 
 #include "utils.h"
 
+#include <QFileDialog>
+#include <QGraphicsOpacityEffect>
+#include <QMessageBox>
+
 Share::Share(QWidget *parent) : QWidget(parent), ui(new Ui::Share) {
   ui->setupUi(this);
   ffmpeg = new QProcess(this);
-  pastebin_it = new QProcess(this);
-  pastebin_it_facebook = new QProcess(this);
-  connect(this->pastebin_it, SIGNAL(finished(int)), this,
-          SLOT(pastebin_it_finished(int)));
-  connect(this->pastebin_it_facebook, SIGNAL(finished(int)), this,
-          SLOT(pastebin_it_facebook_finished(int)));
+  m_networkManager = new QNetworkAccessManager(this);
+  ui->voiceGender->setCurrentIndex(
+      settings.value("shareAudioVoiceGender", 0).toInt());
+  connect(ui->voiceGender, &QComboBox::currentIndexChanged, this,
+          [=](int index) {
+            settings.setValue("shareAudioVoiceGender", index);
+          });
   connect(this->ffmpeg, SIGNAL(finished(int)), this,
           SLOT(ffmpeg_finished(int)));
 }
 
 void Share::setTranslation(QString translation, QString uuid) {
   ui->translation->setPlainText(translation);
+  ui->voiceGender->setCurrentIndex(
+      settings.value("shareAudioVoiceGender", 0).toInt());
   translationUUID = uuid;
 }
 
 Share::~Share() { delete ui; }
 
-void Share::on_twitter_clicked() {
-  showStatus("<span style='color:green'>Share: </span>opening web-browser...");
-  bool opened = QDesktopServices::openUrl(
-      QUrl(QUrl("https://twitter.com/intent/tweet?text=" +
-                ui->translation->toPlainText()))
-          .toString(QUrl::FullyEncoded));
-  if (!opened) {
-    showStatus("<span style='color:red'>Share: </span>unable to open a "
-               "web-browser...");
-  }
-}
-
-void Share::on_facebook_clicked() {
-  QString encoded =
-      QUrl(ui->translation->toPlainText()).toString(QUrl::FullyEncoded);
-  QString o = "wget -O - --post-data=\""
-              "sprunge=" +
-              encoded + "\" http://sprunge.us";
-  pastebin_it_facebook->start("bash", QStringList() << "-c" << o);
-  ui->facebook->setDisabled(true);
-  if (pastebin_it_facebook->waitForStarted(1000)) {
-    showStatus("<span style='color:green'>Share: </span>Prepearing facebook "
-               "share please wait...");
-  } else {
-    showStatus("<span style='color:red'>Share: </span>Failure.<br>");
-  }
-}
 
 QString Share::getFileNameFromString(QString string) {
   QString filename;
@@ -106,23 +86,60 @@ void Share::on_email_clicked() {
 }
 
 void Share::on_pastebin_clicked() {
-  // QString encoded =
-  // QUrl(ui->translation->toPlainText()).toString(QUrl::FullyEncoded);
-  QString o = "wget -O - --post-data=\""
-              "sprunge=" +
-              ui->translation->toPlainText().toHtmlEscaped() +
-              "\" http://sprunge.us";
-  pastebin_it->start("bash", QStringList() << "-c" << o);
-  showStatus("<span style='color:red'>Share: </span>Prepearing facebook share "
-             "please wait...");
-  ui->pastebin->setDisabled(true);
-  if (pastebin_it->waitForStarted(1000)) {
-    showStatus("<span style='color:green'>Share: </span>Uploading paste please "
-               "wait...<br>");
-  } else {
-    showStatus("<span style='color:red'>Share: </span>Failure.<br>");
+  const QString text = ui->translation->toPlainText();
+  if (text.trimmed().isEmpty()) {
+    showStatus("<span style='color:red'>Share: </span>No text to share.");
+    return;
   }
+
+  ui->pastebin->setDisabled(true);
+  showStatus("<span style='color:green'>Share: </span>Uploading paste please wait...");
+
+  QNetworkRequest request(QUrl("https://paste.rs/"));
+  request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
+                       QNetworkRequest::NoLessSafeRedirectPolicy);
+  request.setHeader(QNetworkRequest::ContentTypeHeader,
+                    "text/plain");
+  request.setRawHeader("User-Agent", "glate/1.0");
+  request.setTransferTimeout(15000);
+
+  QByteArray payload = text.toUtf8();
+  if (!payload.endsWith('\n'))
+    payload.append('\n');
+
+  QNetworkReply *reply = m_networkManager->post(request, payload);
+  connect(reply, &QNetworkReply::finished, this, [this, reply]() {
+    const int httpStatus =
+        reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+    const QString body = QString::fromUtf8(reply->readAll()).trimmed();
+    const bool hasShareUrl = body.startsWith("http://") || body.startsWith("https://");
+
+    if (httpStatus == 201 || httpStatus == 206) {
+      if (hasShareUrl) {
+        const QString prefix =
+            httpStatus == 206
+                ? "<span style='color:orange'>Share: </span>Paste uploaded partially (size limit). Link - "
+                : "<span style='color:green'>Share: </span>Share link - ";
+        showStatus(prefix + "<a target='_blank' href='" + body + "'>" + body + "</a>");
+      } else {
+        showStatus("<span style='color:red'>Share: </span>Unexpected response for HTTP " +
+                   QString::number(httpStatus) + ": " + body.toHtmlEscaped());
+      }
+    } else {
+      const QString statusText =
+          httpStatus > 0 ? QString::number(httpStatus) : QString("network");
+      const QString err = reply->error() == QNetworkReply::NoError
+                              ? body
+                              : reply->errorString() +
+                                    (body.isEmpty() ? "" : " | " + body);
+      showStatus("<span style='color:red'>Share: </span>Upload failed (" +
+                 statusText + "): " + err.toHtmlEscaped());
+    }
+    ui->pastebin->setDisabled(false);
+    reply->deleteLater();
+  });
 }
+
 
 // not being used as we are not saving file now to share.
 bool Share::saveFile(QString filename) {
@@ -147,44 +164,11 @@ bool Share::saveFile(QString filename) {
   return true;
 }
 
-void Share::pastebin_it_finished(int k) {
-  if (k == 0) {
-    QString url = pastebin_it->readAll().trimmed().simplified();
-    showStatus("<span style='color:green'>Share: </span>Pastebin link - <a "
-               "target='_blank' href='" +
-               url + "'>" + url + "</a>");
-    ui->pastebin->setDisabled(false);
-  } else {
-    showStatus("<span style='color:red'>" +
-               pastebin_it->readAllStandardError() + "</span><br>");
-    ui->pastebin->setDisabled(false);
-  }
-}
-
-void Share::pastebin_it_facebook_finished(int k) {
-  if (k == 0) {
-    QString url = pastebin_it_facebook->readAll();
-    showStatus("<span style='color:green'>Share: </span>opening web-browser "
-               "with url - https://www.facebook.com/sharer/sharer.php?u=" +
-               url);
-    ui->facebook->setDisabled(false);
-    bool opened = QDesktopServices::openUrl(
-        QUrl("https://www.facebook.com/sharer/sharer.php?u=" + url));
-    if (!opened) {
-      showStatus("<span style='color:red'>Share: </span>unable to open a "
-                 "web-browser...");
-    }
-  } else {
-    showStatus("<span style='color:red'>" +
-               pastebin_it_facebook->readAllStandardError() + "</span><br>");
-    ui->facebook->setDisabled(false);
-  }
-}
 
 void Share::showStatus(QString message) {
-  QGraphicsOpacityEffect *eff = new QGraphicsOpacityEffect(this);
+  auto eff = new QGraphicsOpacityEffect(this);
   ui->status->setGraphicsEffect(eff);
-  QPropertyAnimation *a = new QPropertyAnimation(eff, "opacity");
+  auto a = new QPropertyAnimation(eff, "opacity");
   a->setDuration(500);
   a->setStartValue(0);
   a->setEndValue(1);
@@ -204,6 +188,13 @@ void Share::on_download_clicked() {
   // destroy uuid and file on close.
 
   QString text = ui->translation->toPlainText();
+  const QString selectedGender =
+      settings.value("shareAudioVoiceGender", ui->voiceGender->currentIndex())
+                  .toInt() == 1
+          ? "male"
+          : "female";
+  showStatus("<span style='color:green'>Share: </span>Preparing " +
+             selectedGender + " voice download...");
   QStringList src1Parts;
   QList<QUrl> urls;
   if (utils::splitString(text, 1400, src1Parts)) {
@@ -213,6 +204,7 @@ void Share::on_download_clicked() {
       QUrlQuery params;
       params.addQueryItem("ie", "UTF-8");
       params.addQueryItem("lang", "hi");
+      params.addQueryItem("gender", selectedGender);
       params.addQueryItem("text",
                           QUrl::toPercentEncoding(src1Parts.at(i).toUtf8()));
       url.setQuery(params);

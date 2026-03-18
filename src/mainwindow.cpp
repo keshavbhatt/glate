@@ -1,5 +1,9 @@
 #include "mainwindow.h"
+
+#include <QShortcut>
+
 #include "ui_mainwindow.h"
+#include "utils.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow) {
@@ -33,7 +37,7 @@ MainWindow::MainWindow(QWidget *parent)
   m_translate->setToolTip("Translate (Shift + Enter)");
   m_translate->setStyleSheet("border:none;border-radius:18px;");
   m_translate->setIconSize(QSize(28, 28));
-  QShortcut *shortcut =
+  auto shortcut =
       new QShortcut(QKeySequence(tr("Shift+Return", "Translate")), m_translate,
                     SLOT(click()));
   shortcut->setContext(Qt::ApplicationShortcut);
@@ -94,19 +98,21 @@ MainWindow::MainWindow(QWidget *parent)
     if (m_settings.value("windowState").isValid()) {
       restoreState(m_settings.value("windowState").toByteArray());
     } else {
-      QScreen *pScreen =
-          QGuiApplication::screenAt(this->mapToGlobal({this->width() / 2, 0}));
+      QScreen *pScreen = QGuiApplication::screenAt(
+          this->mapToGlobal(QPoint(this->width() / 2, 0)));
       QRect availableScreenSize = pScreen->availableGeometry();
       this->move(availableScreenSize.center() - this->rect().center());
     }
   }
 
   // init media player
-  m_player = new QMediaPlayer(this, QMediaPlayer::StreamPlayback);
-  m_player->setVolume(100);
-  connect(m_player, &QMediaPlayer::stateChanged, this,
-          [=](QMediaPlayer::State state) {
-            QPushButton *playBtn = this->findChild<QPushButton *>(
+  m_player = new QMediaPlayer(this);
+  auto audioOutput = new QAudioOutput(this);
+  audioOutput->setVolume(1.0);
+  m_player->setAudioOutput(audioOutput);
+  connect(m_player, &QMediaPlayer::playbackStateChanged, this,
+          [=](QMediaPlayer::PlaybackState state) {
+            auto playBtn = this->findChild<QPushButton *>(
                 m_player->objectName().split("_").last());
             if (playBtn != nullptr && state == QMediaPlayer::StoppedState) {
               playBtn->setIcon(QIcon(":/icons/volume-up-line.png"));
@@ -118,12 +124,13 @@ MainWindow::MainWindow(QWidget *parent)
             }
           });
 
-  connect(m_player, QOverload<QMediaPlayer::Error>::of(&QMediaPlayer::error),
-          this, [=](QMediaPlayer::Error error) {
+  connect(m_player, &QMediaPlayer::errorOccurred, this,
+          [=](QMediaPlayer::Error error, const QString &errorString) {
             Q_UNUSED(error);
+            Q_UNUSED(errorString);
             m_playSelected = false;
             m_selectedText.clear();
-            QPushButton *playBtn = this->findChild<QPushButton *>(
+            auto playBtn = this->findChild<QPushButton *>(
                 m_player->objectName().split("_").last());
             if (playBtn != nullptr)
               playBtn->setIcon(QIcon(":/icons/volume-up-line.png"));
@@ -132,7 +139,38 @@ MainWindow::MainWindow(QWidget *parent)
 
   connect(m_player, &QMediaPlayer::mediaStatusChanged, this,
           [=](QMediaPlayer::MediaStatus mediastate) {
-            QPushButton *playBtn = this->findChild<QPushButton *>(
+            if (mediastate == QMediaPlayer::EndOfMedia) {
+              const QStringList ttsQueue =
+                  m_player->property("tts_queue").toStringList();
+              int ttsIndex = m_player->property("tts_index").toInt();
+              const QString ttsLang = m_player->property("tts_lang").toString();
+              const QString ttsGender =
+                  m_player->property("tts_gender").toString();
+
+              if (!ttsQueue.isEmpty() && ttsIndex + 1 < ttsQueue.size()) {
+                ++ttsIndex;
+                m_player->setProperty("tts_index", ttsIndex);
+
+                QUrl url("https://www.google.com/speech-api/v1/synthesize");
+                QUrlQuery params;
+                params.addQueryItem("ie", "UTF-8");
+                params.addQueryItem("lang", ttsLang);
+                params.addQueryItem("gender", ttsGender);
+                params.addQueryItem("text", ttsQueue.at(ttsIndex));
+                url.setQuery(params);
+
+                m_player->setSource(url);
+                m_player->play();
+                return;
+              }
+
+              m_player->setProperty("tts_queue", QStringList());
+              m_player->setProperty("tts_index", -1);
+              m_player->setProperty("tts_lang", QString());
+              m_player->setProperty("tts_gender", QString());
+            }
+
+            auto playBtn = this->findChild<QPushButton *>(
                 m_player->objectName().split("_").last());
             if (playBtn != nullptr &&
                 (mediastate == QMediaPlayer::LoadingMedia ||
@@ -149,7 +187,7 @@ MainWindow::MainWindow(QWidget *parent)
   ui->counter->setText("5000/5000");
   int minWid =
       ui->counter->fontMetrics().boundingRect(ui->counter->text()).width();
-  ui->counter->setText(QString::number(ui->src1->toPlainText().count()) +
+  ui->counter->setText(QString::number(ui->src1->toPlainText().length()) +
                        "/5000");
 
   ui->counter->setMinimumWidth(minWid);
@@ -252,7 +290,10 @@ void MainWindow::init_settings() {
     setStyle(":/qbreeze/" + m_settings.value("theme", "dark").toString() +
              ".qss");
   });
-  if (m_nativeHotkey->isRegistered() == false) {
+  const QString platform = QGuiApplication::platformName().toLower();
+  const bool hotkeyUnsupported = platform.contains("wayland");
+  if (!hotkeyUnsupported && m_settingsWidget->quickResultCheckBoxChecked() &&
+      m_nativeHotkey->isRegistered() == false) {
     showError("Unable to register Global Hotkey.\nIs another instance of " +
               QApplication::applicationName() +
               "running ?\nIf yes close it and restart the application.");
@@ -306,7 +347,7 @@ bool MainWindow::eventFilter(QObject *o, QEvent *e) {
   if (e->type() == QEvent::KeyRelease || e->type() == QEvent::KeyPress ||
       e->type() == QEvent::ShortcutOverride) {
     if (o == ui->src1 || o == ui->src2) {
-      QKeyEvent *keyEvent = static_cast<QKeyEvent *>(e);
+      auto keyEvent = static_cast<QKeyEvent *>(e);
       if ((keyEvent->key() == Qt::Key_Return) &&
           keyEvent->modifiers() & (Qt::ShiftModifier)) {
         m_translate->click();
@@ -370,7 +411,7 @@ void MainWindow::readLangCode() {
     return;
   }
   while (!lang.atEnd()) {
-    QString langLine = QString(lang.readLine());
+    auto langLine = QString(lang.readLine());
     QStringList langItem = langLine.split("<=>");
     m_langName.append(langItem.at(0).trimmed());
     m_langCode.append(langItem.at(1).trimmed());
@@ -384,7 +425,7 @@ void MainWindow::readLangCode() {
     return;
   }
   while (!tts.atEnd()) {
-    QString ttsCode = QString(tts.readLine());
+    auto ttsCode = QString(tts.readLine());
     m_supportedTts.append(ttsCode.trimmed());
   }
   tts.close();
@@ -462,8 +503,18 @@ void MainWindow::translate_clicked() {
 void MainWindow::saveByTransId(const QString &translationId,
                                const QString &reply) {
   QFile jsonFile(utils::returnPath("cache") + "/" + translationId + ".glate");
-  jsonFile.open(QFile::WriteOnly);
-  jsonFile.write(reply.toUtf8());
+  if (!jsonFile.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+    qWarning() << "Unable to open cache file for writing:" << jsonFile.fileName()
+               << jsonFile.errorString();
+    return;
+  }
+
+  const qint64 written = jsonFile.write(reply.toUtf8());
+  if (written < 0) {
+    qWarning() << "Unable to write cache file:" << jsonFile.fileName()
+               << jsonFile.errorString();
+  }
+
   jsonFile.close();
 }
 
@@ -588,10 +639,13 @@ void MainWindow::on_lang2_currentIndexChanged(int index) {
 }
 
 void MainWindow::on_play2_clicked() {
-  bool player1Playing = m_player->objectName().split("_").last() == "play1" &&
-                        m_player->state() == QMediaPlayer::PlayingState;
+  const QString voiceGender =
+      m_settings.value("voiceGender", 0).toInt() == 1 ? "male" : "female";
+  bool player1Playing =
+      m_player->objectName().split("_").last() == "play1" &&
+      m_player->playbackState() == QMediaPlayer::PlayingState;
 
-  if (m_player->state() != QMediaPlayer::PlayingState) {
+  if (m_player->playbackState() != QMediaPlayer::PlayingState) {
     if (m_supportedTts.contains(getTransLang(), Qt::CaseInsensitive) == false) {
       showError("Selected language '" + getTransLang() +
                 "' is not supported by TTS Engine.\nPlease choose different "
@@ -604,23 +658,23 @@ void MainWindow::on_play2_clicked() {
       text = m_selectedText;
 
     QStringList src2Parts;
-    QMediaPlaylist *src2playlist = new QMediaPlaylist(m_player);
-    src2playlist->setPlaybackMode(QMediaPlaylist::Sequential);
-    connect(src2playlist, &QMediaPlaylist::currentIndexChanged, [=](int pos) {
-      qDebug() << "Playist for player2 pos changed" << pos;
-    });
-    if (utils::splitString(text, 1500, src2Parts)) {
-      foreach (QString src2Url, src2Parts) {
-        QUrl url("https://www.google.com/speech-api/v1/synthesize");
-        QUrlQuery params;
-        params.addQueryItem("ie", "UTF-8");
-        params.addQueryItem("lang", getTransLang());
-        params.addQueryItem("text", QUrl::toPercentEncoding(src2Url.toUtf8()));
-        url.setQuery(params);
-        src2playlist->addMedia(QMediaContent(url));
-      }
+    if (!utils::splitString(text, 1500, src2Parts) || src2Parts.isEmpty()) {
+      src2Parts = QStringList{text};
     }
-    m_player->setPlaylist(src2playlist);
+
+    m_player->setProperty("tts_queue", src2Parts);
+    m_player->setProperty("tts_index", 0);
+    m_player->setProperty("tts_lang", getTransLang());
+    m_player->setProperty("tts_gender", voiceGender);
+
+    QUrl url("https://www.google.com/speech-api/v1/synthesize");
+    QUrlQuery params;
+    params.addQueryItem("ie", "UTF-8");
+    params.addQueryItem("lang", getTransLang());
+    params.addQueryItem("gender", voiceGender);
+    params.addQueryItem("text", src2Parts.first());
+    url.setQuery(params);
+    m_player->setSource(url);
     m_player->play();
     ui->play2->setIcon(QIcon(":/icons/loader-2-fill.png"));
   } else {
@@ -637,10 +691,13 @@ void MainWindow::on_play2_clicked() {
 }
 
 void MainWindow::on_play1_clicked() {
-  bool player2Playing = m_player->objectName().split("_").last() == "play2" &&
-                        m_player->state() == QMediaPlayer::PlayingState;
+  const QString voiceGender =
+      m_settings.value("voiceGender", 0).toInt() == 1 ? "male" : "female";
+  bool player2Playing =
+      m_player->objectName().split("_").last() == "play2" &&
+      m_player->playbackState() == QMediaPlayer::PlayingState;
 
-  if (m_player->state() != QMediaPlayer::PlayingState) {
+  if (m_player->playbackState() != QMediaPlayer::PlayingState) {
     if (m_supportedTts.contains(getSourceLang(), Qt::CaseInsensitive) ==
         false) {
       showError("Selected language '" + getSourceLang() +
@@ -654,23 +711,23 @@ void MainWindow::on_play1_clicked() {
       text = m_selectedText;
 
     QStringList src1Parts;
-    QMediaPlaylist *src1playlist = new QMediaPlaylist(m_player);
-    src1playlist->setPlaybackMode(QMediaPlaylist::Sequential);
-    connect(src1playlist, &QMediaPlaylist::currentIndexChanged, [=](int pos) {
-      qDebug() << "Playist for player1 pos changed" << pos;
-    });
-    if (utils::splitString(text, 1500, src1Parts)) {
-      foreach (QString src1Url, src1Parts) {
-        QUrl url("https://www.google.com/speech-api/v1/synthesize");
-        QUrlQuery params;
-        params.addQueryItem("ie", "UTF-8");
-        params.addQueryItem("lang", getSourceLang());
-        params.addQueryItem("text", QUrl::toPercentEncoding(src1Url.toUtf8()));
-        url.setQuery(params);
-        src1playlist->addMedia(QMediaContent(url));
-      }
+    if (!utils::splitString(text, 1500, src1Parts) || src1Parts.isEmpty()) {
+      src1Parts = QStringList{text};
     }
-    m_player->setPlaylist(src1playlist);
+
+    m_player->setProperty("tts_queue", src1Parts);
+    m_player->setProperty("tts_index", 0);
+    m_player->setProperty("tts_lang", getSourceLang());
+    m_player->setProperty("tts_gender", voiceGender);
+
+    QUrl url("https://www.google.com/speech-api/v1/synthesize");
+    QUrlQuery params;
+    params.addQueryItem("ie", "UTF-8");
+    params.addQueryItem("lang", getSourceLang());
+    params.addQueryItem("gender", voiceGender);
+    params.addQueryItem("text", src1Parts.first());
+    url.setQuery(params);
+    m_player->setSource(url);
     m_player->play();
     ui->play1->setIcon(QIcon(":/icons/loader-2-fill.png"));
   } else {
@@ -687,9 +744,9 @@ void MainWindow::on_play1_clicked() {
 }
 
 void MainWindow::on_src1_textChanged() {
-  ui->counter->setText(QString::number(ui->src1->toPlainText().count()) +
+  ui->counter->setText(QString::number(ui->src1->toPlainText().length()) +
                        "/5000");
-  if (ui->src1->toPlainText().count() > 5000) {
+  if (ui->src1->toPlainText().length() > 5000) {
     int diff = ui->src1->toPlainText().length() - 5000;
     QString newStr = ui->src1->toPlainText();
     newStr.chop(diff);
@@ -724,7 +781,7 @@ void MainWindow::on_settings_clicked() {
   if (m_settingsWidget->isVisible() == false) {
     m_settingsWidget->adjustSize();
     QScreen *pScreen = QGuiApplication::screenAt(
-        this->mapToGlobal({m_settingsWidget->width() / 2, 0}));
+        this->mapToGlobal(QPoint(m_settingsWidget->width() / 2, 0)));
     QRect availableScreenSize = pScreen->availableGeometry();
     m_settingsWidget->move(availableScreenSize.center() -
                            m_settingsWidget->rect().center());
@@ -736,7 +793,7 @@ void MainWindow::on_history_clicked() {
   if (m_historyWidget->isVisible() == false) {
     m_historyWidget->loadHistory();
     QScreen *pScreen = QGuiApplication::screenAt(
-        this->mapToGlobal({m_historyWidget->width() / 2, 0}));
+        this->mapToGlobal(QPoint(m_historyWidget->width() / 2, 0)));
     QRect availableScreenSize = pScreen->availableGeometry();
     m_historyWidget->move(availableScreenSize.center() -
                           m_historyWidget->rect().center());
@@ -758,18 +815,22 @@ void MainWindow::on_lineByline_clicked() {
                               getLangName(getTransLang()), m_translationId);
       } else {
         // load translation from cache;
-        QFile jsonFile(utils::returnPath("cache") + "/" + m_translationId +
-                       ".glate");
-        jsonFile.open(QFile::ReadOnly);
+        QFile jsonFile(utils::returnPath("cache") + "/" + m_translationId + ".glate");
+        if (!jsonFile.open(QFile::ReadOnly)) {
+          showError("Unable to open cached translation file.");
+          return;
+        }
+
         m_currentTranslationData.clear();
-        processTranslation(jsonFile.readAll());
-        m_lineByLine->setData(m_currentTranslationData,
-                              getLangName(getSourceLang()),
+        processTranslation(QString::fromUtf8(jsonFile.readAll()));
+        jsonFile.close();
+
+        m_lineByLine->setData(m_currentTranslationData, getLangName(getSourceLang()),
                               getLangName(getTransLang()), m_translationId);
       }
     }
     QScreen *pScreen = QGuiApplication::screenAt(
-        this->mapToGlobal({m_lineByLine->width() / 2, 0}));
+        this->mapToGlobal(QPoint(m_lineByLine->width() / 2, 0)));
     QRect availableScreenSize = pScreen->availableGeometry();
     m_lineByLine->move(availableScreenSize.center() -
                        m_lineByLine->rect().center());

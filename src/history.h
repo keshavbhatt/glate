@@ -2,7 +2,6 @@
 #define HISTORY_H
 
 #include "ui_history_item.h"
-#include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QWidget>
@@ -29,8 +28,8 @@ public slots:
 
 private slots:
   void on_clearall_clicked();
-  QJsonDocument loadJson(QString fileName);
-  void saveJson(QJsonDocument document, QString fileName);
+  static QJsonDocument loadJson(QString fileName);
+  static void saveJson(QJsonDocument document, QString fileName);
 
 private:
   Ui::History *ui;

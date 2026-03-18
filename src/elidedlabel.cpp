@@ -1,6 +1,5 @@
 #include "elidedlabel.h"
 
-#include <QDebug>
 #include <QPainter>
 #include <QResizeEvent>
 #include <QStyle>

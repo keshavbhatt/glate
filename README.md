@@ -18,7 +18,7 @@ Galte is a neat, simple yet feature rich, Google Translator and Text to speech s
 -   History of text translation for reference
 -   Export translated History in text(.txt) format
 -   Translation share option with inbuilt pastebin generator
--   HOTKEY to translate text from any website or other Application
+-   HOTKEY to translate text from any website or other Application (X11/XWayland)
 -   Listen to the pronunciation, Text to Speech
 -   Dark and Light mode
 -   Copy and paste the translated text
@@ -46,6 +46,12 @@ Via command line app can be simply installed with following command:
 ### Snapstore Store link:
 [![glate](https://snapcraft.io/glate/trending.svg)](https://snapcraft.io/glate)
 [![Get it from the Snap Store](https://snapcraft.io/static/images/badges/en/snap-store-black.svg)](https://snapcraft.io/glate)
+
+## Global Hotkey Note (Wayland)
+
+Global hotkeys are not available on native Wayland sessions due to compositor security restrictions.
+If you need system-wide quick translate hotkeys, run Glate on an X11 session (or via XWayland where supported).
+
 <hr>
  Version for Windows coming soon... Stay tuned for updates :)
 <hr>

@@ -1,22 +1,56 @@
 #include "settings.h"
+
+#include <QDesktopServices>
+
 #include "ui_settings.h"
+
+#include <QGuiApplication>
 
 Settings::Settings(QWidget *parent, QHotkey *hotKey)
     : QWidget(parent), ui(new Ui::Settings) {
   ui->setupUi(this);
   this->nativeHotkey = hotKey;
+  const QString platform = QGuiApplication::platformName().toLower();
+  m_hotkeySupported = !platform.contains("wayland");
+
   readSettings();
-  connect(this->nativeHotkey, &QHotkey::activated, this,
-          &Settings::get_selected_word_fromX11);
 
-  connect(ui->quickResultCheckBox, &QCheckBox::toggled, this->nativeHotkey,
-          &QHotkey::setRegistered);
+  connect(ui->voiceGenderGlobal, &QComboBox::currentIndexChanged, this,
+          [=](int index) { settings.setValue("voiceGender", index); });
 
-  connect(ui->keySequenceEdit, &QKeySequenceEdit::keySequenceChanged, this,
-          &Settings::setShortcut);
+  if (m_hotkeySupported && this->nativeHotkey != nullptr) {
+    connect(this->nativeHotkey, &QHotkey::activated, this,
+            &Settings::get_selected_word_fromX11);
+
+    connect(ui->quickResultCheckBox, &QCheckBox::toggled, this->nativeHotkey,
+            &QHotkey::setRegistered);
+
+    connect(ui->keySequenceEdit, &QKeySequenceEdit::keySequenceChanged, this,
+            &Settings::setShortcut);
+  }
+
+  if (!m_hotkeySupported) {
+    const QString unsupportedTooltip =
+        tr("Global shortcuts are unavailable on native Wayland sessions.");
+    ui->quickResultCheckBox->setChecked(false);
+    ui->quickResultCheckBox->setEnabled(false);
+    ui->quickResultCheckBox->setText(tr("Quick Translate (unavailable)"));
+    ui->quickResultCheckBox->setToolTip(unsupportedTooltip);
+    ui->keySequenceEdit->setEnabled(false);
+    ui->keySequenceEdit->setToolTip(unsupportedTooltip);
+    settings.setValue("quicktrans", false);
+    if (this->nativeHotkey != nullptr)
+      this->nativeHotkey->setRegistered(false);
+  }
 
   ui->dark->setChecked(settings.value("theme", "dark").toString() == "dark");
   ui->light->setChecked(settings.value("theme").toString() == "light");
+
+  const QString hotkeyNote =
+      m_hotkeySupported
+          ? QString()
+          : tr("<p align=\"center\"><span><b>Note:</b> Global shortcuts are "
+               "not available on native Wayland sessions.</span></p>");
 
   QString aboutTxt =
       R"(<p align="center"> <span style="font-weight: bold;">Glate</span></p>
@@ -25,15 +59,18 @@ Settings::Settings(QWidget *parent, QHotkey *hotKey)
          <span> &lt;keshavnrj@gmail.com&gt;</span></p>
          <p align="center"><span>Website: https://ktechpit.com</span></p>
          <p align="center"><span>Runtime: %1</span></p>
-         <p align="center"><span>Version: %2</span></p>)";
+         <p align="center"><span>Version: %2</span></p>
+         %3)";
 
   ui->aboutTextBrowser->setText(
-      aboutTxt.arg(qVersion(), qApp->applicationVersion()));
+      aboutTxt.arg(qVersion(), qApp->applicationVersion(), hotkeyNote));
 }
 
 Settings::~Settings() { delete ui; }
 
 void Settings::setShortcut(const QKeySequence &sequence) {
+  if (!m_hotkeySupported || this->nativeHotkey == nullptr)
+    return;
   this->nativeHotkey->setShortcut(sequence,
                                   ui->quickResultCheckBox->isChecked());
   // save quick trans shortcut instanty
@@ -52,22 +89,30 @@ void Settings::readSettings() {
   }
   // quick trans key sequence
   if (settings.value("quicktrans_shortcut").isValid()) {
-    QKeySequence k =
+    auto k =
         QKeySequence(settings.value("quicktrans_shortcut").toString());
     ui->keySequenceEdit->setKeySequence(k);
-    this->nativeHotkey->setShortcut(k.toString(),
-                                    settings.value("quicktrans").toBool());
+    if (m_hotkeySupported && this->nativeHotkey != nullptr) {
+      this->nativeHotkey->setShortcut(k.toString(),
+                                      settings.value("quicktrans").toBool());
+    }
   } else {
     // default value if value not founds
     QKeySequence k = QKeySequence::fromString(tr("Ctrl+Shift+Space"));
     ui->keySequenceEdit->setKeySequence(k);
-    this->nativeHotkey->setShortcut(k.toString(), true);
-    ui->quickResultCheckBox->setChecked(true);
+    if (m_hotkeySupported && this->nativeHotkey != nullptr) {
+      this->nativeHotkey->setShortcut(k.toString(), true);
+      ui->quickResultCheckBox->setChecked(true);
+    }
   }
+
+  // global TTS voice preference
+  ui->voiceGenderGlobal->setCurrentIndex(
+      settings.value("voiceGender", 0).toInt());
 }
 
 void Settings::get_selected_word_fromX11() {
-  QProcess *xsel = new QProcess(this);
+  auto xsel = new QProcess(this);
   xsel->setObjectName("xclip");
   xsel->start("xclip", QStringList() << "-o"
                                      << "-sel");
@@ -75,7 +120,7 @@ void Settings::get_selected_word_fromX11() {
 }
 
 void Settings::set_x11_selection() {
-  QObject *xselection = this->findChild<QObject *>("xclip");
+  auto xselection = this->findChild<QObject *>("xclip");
   if (xselection) {
     x11_selected = ((QProcess *)(xselection))->readAllStandardOutput();
     if (!x11_selected.trimmed().isEmpty())

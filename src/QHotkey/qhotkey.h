@@ -3,7 +3,6 @@
 
 #include <QObject>
 #include <QKeySequence>
-#include <QPair>
 #include <QLoggingCategory>
 
 #ifdef QHOTKEY_LIB

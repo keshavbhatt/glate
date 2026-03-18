@@ -1,7 +1,6 @@
 #ifndef UTILS_H
 #define UTILS_H
 
-#include <QDebug>
 #include <QDir>
 #include <QFileInfo>
 #include <QObject>
@@ -17,8 +16,8 @@ public:
 public slots:
   static bool splitString(const QString &str, int m, QStringList &list);
   static QString refreshCacheSize(const QString cache_dir);
-  bool delete_cache(const QString cache_dir);
-  QString toCamelCase(const QString &s);
+  static bool delete_cache(const QString cache_dir);
+  static QString toCamelCase(const QString &s);
   static QString generateRandomId(int length);
   static QString convertSectoDay(qint64 secs);
   static QString returnPath(QString pathname);

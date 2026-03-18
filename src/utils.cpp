@@ -1,5 +1,7 @@
 #include "utils.h"
 #include <QDateTime>
+#include <QRandomGenerator>
+#include <QRegularExpression>
 
 utils::utils(QObject *parent) : QObject(parent) {}
 
@@ -54,7 +56,7 @@ bool utils::delete_cache(const QString cache_dir) {
 
 // returns string with first letter capitalized
 QString utils::toCamelCase(const QString &s) {
-  QStringList parts = s.split(' ', QString::SkipEmptyParts);
+  QStringList parts = s.split(' ', Qt::SkipEmptyParts);
   for (int i = 0; i < parts.size(); ++i)
     parts[i].replace(0, 1, parts[i][0].toUpper());
   return parts.join(" ");
@@ -66,12 +68,11 @@ QString utils::generateRandomId(int length) {
   const QString possibleCharacters(
       "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789" +
       QString::number(cd.currentMSecsSinceEpoch())
-          .remove(QRegExp("[^a-zA-Z\\d\\s]")));
+          .remove(QRegularExpression("[^a-zA-Z\\d\\s]")));
   const int randomStringLength = length;
   QString randomString;
-  qsrand(cd.toTime_t());
   for (int i = 0; i < randomStringLength; ++i) {
-    int index = qrand() % possibleCharacters.length();
+    int index = QRandomGenerator::global()->bounded(possibleCharacters.length());
     QChar nextChar = possibleCharacters.at(index);
     randomString.append(nextChar);
   }
@@ -99,7 +100,7 @@ QString utils::convertSectoDay(qint64 secs) {
 // static on demand path maker
 QString utils::returnPath(QString pathname) {
   QString _data_path =
-      QStandardPaths::writableLocation(QStandardPaths::DataLocation);
+      QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
   if (!QDir(_data_path + "/" + pathname).exists()) {
     QDir d(_data_path + "/" + pathname);
     d.mkpath(_data_path + "/" + pathname);
@@ -128,7 +129,7 @@ bool utils::splitString(const QString &str, int m, QStringList &list) {
     QString strPart;
     if (QString(words.join(" ")).length() > m) {
       for (int i = 0; i < words.count(); i++) {
-        if (strPart.count() < m) {
+        if (strPart.length() < m) {
           strPart.append(words.at(i) + " ");
           words.removeAt(i);
           --i;

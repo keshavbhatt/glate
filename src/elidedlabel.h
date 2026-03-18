@@ -3,7 +3,6 @@
 #include <QPainter>
 #include <QResizeEvent>
 #include <QString>
-#include <QFont>
 
 // A label that elides its text when not enough geometry is available to show all of the text.
 // Currently only capable of one-line.
@@ -16,9 +15,9 @@ private:
 
 
 public:
-    ElidedLabel(QWidget* parent = NULL, Qt::WindowFlags f = 0);
-    ElidedLabel(const QString& txt, QWidget* parent = NULL, Qt::WindowFlags f = 0);
-    ElidedLabel(const QString& txt, Qt::TextElideMode elideMode = Qt::ElideRight, QWidget* parent = NULL, Qt::WindowFlags f = 0);
+    ElidedLabel(QWidget* parent = nullptr, Qt::WindowFlags f = Qt::WindowFlags());
+    ElidedLabel(const QString& txt, QWidget* parent = nullptr, Qt::WindowFlags f = Qt::WindowFlags());
+    ElidedLabel(const QString& txt, Qt::TextElideMode elideMode = Qt::ElideRight, QWidget* parent = nullptr, Qt::WindowFlags f = Qt::WindowFlags());
 
 public:
     // Set the elide mode used for displaying text.

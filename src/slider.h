@@ -1,12 +1,8 @@
 #ifndef SLIDER_H
 #define SLIDER_H
 
-#include <QDebug>
-#include <QDesktopServices>
-#include <QFile>
 #include <QLabel>
 #include <QPropertyAnimation>
-#include <QPushButton>
 #include <QTimer>
 #include <QWidget>
 
