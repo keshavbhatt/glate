@@ -74,18 +74,7 @@
          </layout>
         </item>
         <item row="2" column="1">
-         <widget class="QComboBox" name="voiceGenderGlobal">
-          <item>
-           <property name="text">
-            <string>Female (Default)</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>Male</string>
-           </property>
-          </item>
-         </widget>
+         <widget class="QComboBox" name="voiceGenderGlobal"/>
         </item>
         <item row="3" column="0">
          <widget class="QLabel" name="closeLabel">

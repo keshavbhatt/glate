@@ -121,6 +121,19 @@ QString utils::htmlToPlainText(QString str) {
       .replace("&#39;", "'");
 }
 
+QVector<VoiceOption> utils::availableVoices() {
+  return {
+    { "Female (Default)",         "female", ""      },
+    { "Male",                     "male",   ""      },
+    { "UK Female (en-GB)",        "female", "en-GB" },
+    { "UK Male (en-GB)",          "male",   "en-GB" },
+    { "Australian Female (en-AU)","female", "en-AU" },
+    { "Australian Male (en-AU)",  "male",   "en-AU" },
+    { "Indian English Female (en-IN)", "female", "en-IN" },
+    { "Indian English Male (en-IN)",   "male",   "en-IN" },
+  };
+}
+
 bool utils::splitString(const QString &str, int m, QStringList &list) {
   if (m < 1)
     return false;

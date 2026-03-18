@@ -3,6 +3,7 @@
 #include <QDesktopServices>
 
 #include "ui_settings.h"
+#include "utils.h"
 
 #include <QGuiApplication>
 
@@ -10,6 +11,12 @@ Settings::Settings(QWidget *parent, QHotkey *hotKey)
     : QWidget(parent), ui(new Ui::Settings) {
   ui->setupUi(this);
   this->nativeHotkey = hotKey;
+
+  // Populate voice combo from central voice list
+  ui->voiceGenderGlobal->clear();
+  for (const VoiceOption &v : utils::availableVoices())
+    ui->voiceGenderGlobal->addItem(v.displayName);
+
   const QString platform = QGuiApplication::platformName().toLower();
   m_hotkeySupported = !platform.contains("wayland");
 

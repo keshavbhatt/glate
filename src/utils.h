@@ -6,6 +6,13 @@
 #include <QObject>
 #include <QStandardPaths>
 #include <QTextDocument>
+#include <QVector>
+
+struct VoiceOption {
+  QString displayName;
+  QString gender;        // "male" or "female"
+  QString langOverride;  // empty = use translation lang; e.g. "en-GB"
+};
 
 class utils : public QObject {
   Q_OBJECT
@@ -21,6 +28,7 @@ public slots:
   static QString generateRandomId(int length);
   static QString convertSectoDay(qint64 secs);
   static QString returnPath(QString pathname);
+  static QVector<VoiceOption> availableVoices();
 
   static QString EncodeXML(const QString &encodeMe) {
 
