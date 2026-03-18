@@ -1,8 +1,8 @@
 QToolTip {
-    border: 1px solid #76797C;
-    background-color: #5A7566;
-    color: white;
-    padding: 0px;
+    border: 1px solid #5ca3d6;
+    background-color: #1f252b;
+    color: #f5f7fa;
+    padding: 4px 6px;
     opacity: 200;
 }
 
@@ -10,7 +10,7 @@ QWidget {
     color: #eff0f1;
     background-color: #31363b;
     selection-background-color: #3daee9;
-    selection-color: #eff0f1;
+    selection-color: #0f1419;
     background-clip: border;
     border-image: none;
     border: 0px transparent black;
@@ -34,7 +34,7 @@ QCheckBox {
 }
 
 QCheckBox:disabled {
-    color: #76797C;
+    color: #9aa2ab;
 }
 
 QCheckBox::indicator,
@@ -105,7 +105,7 @@ QRadioButton {
 }
 
 QRadioButton:disabled {
-    color: #76797C;
+    color: #9aa2ab;
 }
 
 QRadioButton::indicator {
@@ -247,7 +247,7 @@ QMenu::right-arrow {
 }
 
 QWidget:disabled {
-    color: #454545;
+    color: #8b929a;
     background-color: #31363b;
 }
 
@@ -274,7 +274,7 @@ QLineEdit {
     background-color: #232629;
     padding: 5px;
     border-style: solid;
-    border: 1px solid #76797C;
+    border: 1px solid #8c949d;
     border-radius: 2px;
     color: #eff0f1;
 }
@@ -426,7 +426,7 @@ QScrollBar::sub-page:vertical {
 QTextEdit {
     background-color: #232629;
     color: #eff0f1;
-    border: 1px solid #76797C;
+    border: 1px solid #8c949d;
 }
 
 QPlainTextEdit {
@@ -434,7 +434,7 @@ QPlainTextEdit {
     ;
     color: #eff0f1;
     border-radius: 2px;
-    border: 1px solid #76797C;
+    border: 1px solid #8c949d;
 }
 
 QHeaderView::section {
@@ -529,14 +529,14 @@ QPushButton {
 QPushButton:disabled {
     background-color: #31363b;
     border-width: 1px;
-    border-color: #454545;
+    border-color: #5f6670;
     border-style: solid;
     padding-top: 5px;
     padding-bottom: 5px;
     padding-left: 10px;
     padding-right: 10px;
     border-radius: 2px;
-    color: #454545;
+    color: #a0a8b1;
 }
 
 QPushButton:focus {
