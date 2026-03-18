@@ -384,9 +384,12 @@ void MainWindow::closeEvent(QCloseEvent *event) {
   m_settings.setValue("quicktrans",
                       m_settingsWidget->quickResultCheckBoxChecked());
 
-  // persist close behavior and read effective value from settings
-  m_settings.setValue("closeToTray", m_settingsWidget->closeToTrayEnabled());
-  const bool closeToTray = m_settings.value("closeToTray", true).toBool();
+  // Use live UI state for this close action, then persist it.
+  const bool closeToTray =
+      m_settingsWidget != nullptr
+          ? m_settingsWidget->closeToTrayEnabled()
+          : m_settings.value("closeToTray", true).toBool();
+  m_settings.setValue("closeToTray", closeToTray);
 
   if (!m_forceQuit && m_trayManager->isTrayAvailable() && closeToTray) {
     m_trayManager->updateMenu(false);
@@ -394,6 +397,7 @@ void MainWindow::closeEvent(QCloseEvent *event) {
     event->ignore();
     return;
   }
+  qApp->quit();
 
   QMainWindow::closeEvent(event);
 }
