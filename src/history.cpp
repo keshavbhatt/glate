@@ -24,7 +24,7 @@ void History::on_clearall_clicked() {
 
 void History::insertItem(QStringList meta, bool fromHistory,
                          QString translationId) {
-  QWidget *histWid = new QWidget();
+  auto histWid = new QWidget();
   if (meta.count() >= 5) {
     QString from, to, src1, src2, date;
     from = meta.at(0);

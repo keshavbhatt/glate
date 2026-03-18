@@ -95,27 +95,51 @@ void Share::on_pastebin_clicked() {
   ui->pastebin->setDisabled(true);
   showStatus("<span style='color:green'>Share: </span>Uploading paste please wait...");
 
-  QNetworkRequest request(QUrl("https://paste.rs"));
+  QNetworkRequest request(QUrl("https://paste.rs/"));
+  request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
+                       QNetworkRequest::NoLessSafeRedirectPolicy);
   request.setHeader(QNetworkRequest::ContentTypeHeader,
-                    "text/plain; charset=utf-8");
+                    "text/plain");
+  request.setRawHeader("User-Agent", "glate/1.0");
+  request.setTransferTimeout(15000);
 
-  QNetworkReply *reply = m_networkManager->post(request, text.toUtf8());
+  QByteArray payload = text.toUtf8();
+  if (!payload.endsWith('\n'))
+    payload.append('\n');
+
+  QNetworkReply *reply = m_networkManager->post(request, payload);
   connect(reply, &QNetworkReply::finished, this, [this, reply]() {
+    const int httpStatus =
+        reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
     const QString body = QString::fromUtf8(reply->readAll()).trimmed();
-    if (reply->error() == QNetworkReply::NoError &&
-        (body.startsWith("http://") || body.startsWith("https://"))) {
-      showStatus("<span style='color:green'>Share: </span>Pastebin link - <a target='_blank' href='" +
-                 body + "'>" + body + "</a>");
+    const bool hasShareUrl = body.startsWith("http://") || body.startsWith("https://");
+
+    if (httpStatus == 201 || httpStatus == 206) {
+      if (hasShareUrl) {
+        const QString prefix =
+            httpStatus == 206
+                ? "<span style='color:orange'>Share: </span>Paste uploaded partially (size limit). Link - "
+                : "<span style='color:green'>Share: </span>Share link - ";
+        showStatus(prefix + "<a target='_blank' href='" + body + "'>" + body + "</a>");
+      } else {
+        showStatus("<span style='color:red'>Share: </span>Unexpected response for HTTP " +
+                   QString::number(httpStatus) + ": " + body.toHtmlEscaped());
+      }
     } else {
-      const QString err =
-          reply->error() == QNetworkReply::NoError ? body : reply->errorString();
-      showStatus("<span style='color:red'>Share: </span>Upload failed. Response: " +
-                 err.toHtmlEscaped());
+      const QString statusText =
+          httpStatus > 0 ? QString::number(httpStatus) : QString("network");
+      const QString err = reply->error() == QNetworkReply::NoError
+                              ? body
+                              : reply->errorString() +
+                                    (body.isEmpty() ? "" : " | " + body);
+      showStatus("<span style='color:red'>Share: </span>Upload failed (" +
+                 statusText + "): " + err.toHtmlEscaped());
     }
     ui->pastebin->setDisabled(false);
     reply->deleteLater();
   });
 }
+
 
 // not being used as we are not saving file now to share.
 bool Share::saveFile(QString filename) {
@@ -142,9 +166,9 @@ bool Share::saveFile(QString filename) {
 
 
 void Share::showStatus(QString message) {
-  QGraphicsOpacityEffect *eff = new QGraphicsOpacityEffect(this);
+  auto eff = new QGraphicsOpacityEffect(this);
   ui->status->setGraphicsEffect(eff);
-  QPropertyAnimation *a = new QPropertyAnimation(eff, "opacity");
+  auto a = new QPropertyAnimation(eff, "opacity");
   a->setDuration(500);
   a->setStartValue(0);
   a->setEndValue(1);

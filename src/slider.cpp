@@ -127,18 +127,18 @@ void Slider::changeSlide(int index) {
     }
   }
   // show requested slide
-  Slide *slide = this->findChild<Slide *>("slide_" + QString::number(index));
+  auto slide = this->findChild<Slide *>("slide_" + QString::number(index));
   ui->view->addWidget(slide);
   slide->show();
   uncheckAllNavBtn();
-  QPushButton *navBtn =
+  auto navBtn =
       this->findChild<QPushButton *>("navBtn_" + QString::number(index));
   navBtn->setChecked(true);
   progressBarUpdate();
 }
 
 void Slider::createSlide(QString html, int index) {
-  Slide *slide = new Slide(this);
+  auto slide = new Slide(this);
   slide->setObjectName("slide_" + QString::number(index));
   slide->hide();
   slide->setText(html);
@@ -150,7 +150,7 @@ void Slider::createSlide(QString html, int index) {
     }
   });
   // make button without name
-  QPushButton *navBtn = new QPushButton("", this);
+  auto navBtn = new QPushButton("", this);
   navBtn->setCheckable(true);
   navBtn->setFixedSize(12, 12);
   // uncomment to make buttons circular

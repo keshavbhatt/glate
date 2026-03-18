@@ -32,8 +32,8 @@ void TranslationDownloader::start() {
 }
 
 void TranslationDownloader::startDownload(QUrl url) {
-  QNetworkAccessManager *m_netwManager = new QNetworkAccessManager(this);
-  QNetworkDiskCache *diskCache = new QNetworkDiskCache(this);
+  auto m_netwManager = new QNetworkAccessManager(this);
+  auto diskCache = new QNetworkDiskCache(this);
   diskCache->setCacheDirectory(_cache_path);
   m_netwManager->setCache(diskCache);
   connect(m_netwManager, &QNetworkAccessManager::finished,

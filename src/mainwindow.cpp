@@ -37,7 +37,7 @@ MainWindow::MainWindow(QWidget *parent)
   m_translate->setToolTip("Translate (Shift + Enter)");
   m_translate->setStyleSheet("border:none;border-radius:18px;");
   m_translate->setIconSize(QSize(28, 28));
-  QShortcut *shortcut =
+  auto shortcut =
       new QShortcut(QKeySequence(tr("Shift+Return", "Translate")), m_translate,
                     SLOT(click()));
   shortcut->setContext(Qt::ApplicationShortcut);
@@ -107,12 +107,12 @@ MainWindow::MainWindow(QWidget *parent)
 
   // init media player
   m_player = new QMediaPlayer(this);
-  QAudioOutput *audioOutput = new QAudioOutput(this);
+  auto audioOutput = new QAudioOutput(this);
   audioOutput->setVolume(1.0);
   m_player->setAudioOutput(audioOutput);
   connect(m_player, &QMediaPlayer::playbackStateChanged, this,
           [=](QMediaPlayer::PlaybackState state) {
-            QPushButton *playBtn = this->findChild<QPushButton *>(
+            auto playBtn = this->findChild<QPushButton *>(
                 m_player->objectName().split("_").last());
             if (playBtn != nullptr && state == QMediaPlayer::StoppedState) {
               playBtn->setIcon(QIcon(":/icons/volume-up-line.png"));
@@ -130,7 +130,7 @@ MainWindow::MainWindow(QWidget *parent)
             Q_UNUSED(errorString);
             m_playSelected = false;
             m_selectedText.clear();
-            QPushButton *playBtn = this->findChild<QPushButton *>(
+            auto playBtn = this->findChild<QPushButton *>(
                 m_player->objectName().split("_").last());
             if (playBtn != nullptr)
               playBtn->setIcon(QIcon(":/icons/volume-up-line.png"));
@@ -170,7 +170,7 @@ MainWindow::MainWindow(QWidget *parent)
               m_player->setProperty("tts_gender", QString());
             }
 
-            QPushButton *playBtn = this->findChild<QPushButton *>(
+            auto playBtn = this->findChild<QPushButton *>(
                 m_player->objectName().split("_").last());
             if (playBtn != nullptr &&
                 (mediastate == QMediaPlayer::LoadingMedia ||
@@ -347,7 +347,7 @@ bool MainWindow::eventFilter(QObject *o, QEvent *e) {
   if (e->type() == QEvent::KeyRelease || e->type() == QEvent::KeyPress ||
       e->type() == QEvent::ShortcutOverride) {
     if (o == ui->src1 || o == ui->src2) {
-      QKeyEvent *keyEvent = static_cast<QKeyEvent *>(e);
+      auto keyEvent = static_cast<QKeyEvent *>(e);
       if ((keyEvent->key() == Qt::Key_Return) &&
           keyEvent->modifiers() & (Qt::ShiftModifier)) {
         m_translate->click();
@@ -411,7 +411,7 @@ void MainWindow::readLangCode() {
     return;
   }
   while (!lang.atEnd()) {
-    QString langLine = QString(lang.readLine());
+    auto langLine = QString(lang.readLine());
     QStringList langItem = langLine.split("<=>");
     m_langName.append(langItem.at(0).trimmed());
     m_langCode.append(langItem.at(1).trimmed());
@@ -425,7 +425,7 @@ void MainWindow::readLangCode() {
     return;
   }
   while (!tts.atEnd()) {
-    QString ttsCode = QString(tts.readLine());
+    auto ttsCode = QString(tts.readLine());
     m_supportedTts.append(ttsCode.trimmed());
   }
   tts.close();

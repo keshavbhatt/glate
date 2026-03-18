@@ -90,10 +90,10 @@
      <item>
       <widget class="QToolButton" name="pastebin">
        <property name="toolTip">
-        <string>Upload to Paste.rs and get URL</string>
+        <string>Create a public share link (Paste.rs with automatic fallback)</string>
        </property>
        <property name="text">
-        <string>Paste.rs URL</string>
+        <string>Create Share Link</string>
        </property>
        <property name="icon">
         <iconset resource="icons.qrc">

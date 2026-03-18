@@ -89,7 +89,7 @@ void Settings::readSettings() {
   }
   // quick trans key sequence
   if (settings.value("quicktrans_shortcut").isValid()) {
-    QKeySequence k =
+    auto k =
         QKeySequence(settings.value("quicktrans_shortcut").toString());
     ui->keySequenceEdit->setKeySequence(k);
     if (m_hotkeySupported && this->nativeHotkey != nullptr) {
@@ -112,7 +112,7 @@ void Settings::readSettings() {
 }
 
 void Settings::get_selected_word_fromX11() {
-  QProcess *xsel = new QProcess(this);
+  auto xsel = new QProcess(this);
   xsel->setObjectName("xclip");
   xsel->start("xclip", QStringList() << "-o"
                                      << "-sel");
@@ -120,7 +120,7 @@ void Settings::get_selected_word_fromX11() {
 }
 
 void Settings::set_x11_selection() {
-  QObject *xselection = this->findChild<QObject *>("xclip");
+  auto xselection = this->findChild<QObject *>("xclip");
   if (xselection) {
     x11_selected = ((QProcess *)(xselection))->readAllStandardOutput();
     if (!x11_selected.trimmed().isEmpty())

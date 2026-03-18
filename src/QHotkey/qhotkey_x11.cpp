@@ -57,9 +57,9 @@ bool QHotkeyPrivateX11::nativeEventFilter(const QByteArray &eventType, void *mes
 	Q_UNUSED(eventType);
 	Q_UNUSED(result);
 
-	xcb_generic_event_t *genericEvent = static_cast<xcb_generic_event_t *>(message);
+	auto genericEvent = static_cast<xcb_generic_event_t *>(message);
 	if (genericEvent->response_type == XCB_KEY_PRESS) {
-		xcb_key_press_event_t *keyEvent = static_cast<xcb_key_press_event_t *>(message);
+		auto keyEvent = static_cast<xcb_key_press_event_t *>(message);
 		this->activateShortcut({keyEvent->detail, keyEvent->state & QHotkeyPrivateX11::validModsMask});
 	}
 
