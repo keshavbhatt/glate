@@ -3,7 +3,6 @@
 
 #include <QClipboard>
 #include <QDebug>
-#include <QDesktopWidget>
 #include <QFile>
 #include <QHotkey>
 #include <QJsonArray>
@@ -12,8 +11,8 @@
 #include <QKeyEvent>
 #include <QKeySequence>
 #include <QMainWindow>
+#include <QAudioOutput>
 #include <QMediaPlayer>
-#include <QMediaPlaylist>
 #include <QMessageBox>
 #include <QMimeData>
 #include <QPushButton>
