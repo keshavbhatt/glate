@@ -3,21 +3,10 @@
 
 #include "translationdownloader.h"
 
-#include <QDateTime>
 #include <QDesktopServices>
-#include <QFile>
-#include <QFileDialog>
-#include <QGraphicsOpacityEffect>
-#include <QMessageBox>
 #include <QNetworkAccessManager>
-#include <QNetworkReply>
 #include <QProcess>
-#include <QPropertyAnimation>
 #include <QSettings>
-#include <QStandardPaths>
-#include <QTextStream>
-#include <QTimer>
-#include <QUrlQuery>
 #include <QWidget>
 
 namespace Ui {
@@ -34,8 +23,6 @@ public:
 public slots:
   void setTranslation(QString translation, QString uuid);
 private slots:
-  void on_twitter_clicked();
-  void on_facebook_clicked();
   void on_text_clicked();
   void on_email_clicked();
   void on_pastebin_clicked();

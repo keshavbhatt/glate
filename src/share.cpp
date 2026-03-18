@@ -18,27 +18,6 @@ void Share::setTranslation(QString translation, QString uuid) {
 
 Share::~Share() { delete ui; }
 
-void Share::on_twitter_clicked() {
-  showStatus("<span style='color:green'>Share: </span>opening web-browser...");
-  bool opened = QDesktopServices::openUrl(
-      QUrl("https://x.com/intent/tweet?text=" +
-           QUrl::toPercentEncoding(ui->translation->toPlainText())));
-  if (!opened) {
-    showStatus("<span style='color:red'>Share: </span>unable to open a "
-               "web-browser...");
-  }
-}
-
-void Share::on_facebook_clicked() {
-   showStatus("<span style='color:green'>Share: </span>opening web-browser...");
-   bool opened = QDesktopServices::openUrl(
-       QUrl("https://www.facebook.com/sharer/sharer.php?quote=" +
-            QUrl::toPercentEncoding(ui->translation->toPlainText())));
-   if (!opened) {
-     showStatus("<span style='color:red'>Share: </span>unable to open a "
-                "web-browser...");
-   }
- }
 
 QString Share::getFileNameFromString(QString string) {
   QString filename;
