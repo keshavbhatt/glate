@@ -9,7 +9,7 @@ QToolTip {
 QWidget {
     color: #eff0f1;
     background-color: #31363b;
-    selection-background-color: #3daee9;
+    selection-background-color: #2b8fbe;
     selection-color: #0f1419;
     background-clip: border;
     border-image: none;
@@ -23,7 +23,8 @@ QWidget:item:hover {
 }
 
 QWidget:item:selected {
-    background-color: #18465d;
+    background-color: #2b8fbe;
+    color: #0f1419;
 }
 
 QCheckBox {
@@ -903,8 +904,8 @@ QTreeView::item:!selected:hover {
 
 QListView::item:selected:hover,
 QTreeView::item:selected:hover {
-    background: #3DAEE9;
-    color: #eff0f1;
+    background: #2b8fbe;
+    color: #0f1419;
 }
 
 QTreeView::indicator:checked,
@@ -1085,8 +1086,18 @@ QTreeView::item:pressed {
 QTableView::item:selected:active,
 QTreeView::item:selected:active,
 QListView::item:selected:active {
-    background: #3DAEE9;
-    color: #eff0f1;
+    background: #2b8fbe;
+    color: #0f1419;
+}
+
+QTableView::item:selected:!active,
+QTreeView::item:selected:!active,
+QListView::item:selected:!active,
+QTableView::item:selected,
+QTreeView::item:selected,
+QListView::item:selected {
+    background: #2b8fbe;
+    color: #0f1419;
 }
 
 QHeaderView {
