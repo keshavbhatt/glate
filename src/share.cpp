@@ -27,7 +27,7 @@ Share::Share(QWidget *parent) : QWidget(parent), ui(new Ui::Share) {
           SLOT(ffmpeg_finished(int)));
 }
 
-void Share::setTranslation(QString translation, QString uuid, QString langCode) {
+void Share::setTranslation(const QString &translation, const QString &uuid, const QString &langCode) {
   ui->translation->setPlainText(translation);
   ui->voiceGender->setCurrentIndex(
       settings.value("shareAudioVoiceGender", 0).toInt());
@@ -38,7 +38,7 @@ void Share::setTranslation(QString translation, QString uuid, QString langCode) 
 Share::~Share() { delete ui; }
 
 
-QString Share::getFileNameFromString(QString string) {
+QString Share::getFileNameFromString(const QString &string) {
   QString filename;
   if (string.trimmed().length() > 10) {
     filename = string.trimmed().left(10).trimmed();
@@ -149,9 +149,9 @@ void Share::on_pastebin_clicked() {
 
 
 // not being used as we are not saving file now to share.
-bool Share::saveFile(QString filename) {
+bool Share::saveFile(const QString &filename) {
   QString path = QStandardPaths::writableLocation(QStandardPaths::TempLocation);
-  QFile file(path + "/" + filename);
+  QFile file(path + QDir::separator() + filename);
   if (!file.open(QFile::WriteOnly | QFile::Text)) {
     QMessageBox::warning(this, tr("Application"),
                          tr("Cannot write file %1:\n%2.")
@@ -172,7 +172,7 @@ bool Share::saveFile(QString filename) {
 }
 
 
-void Share::showStatus(QString message) {
+void Share::showStatus(const QString &message) {
   auto eff = new QGraphicsOpacityEffect(this);
   ui->status->setGraphicsEffect(eff);
   auto a = new QPropertyAnimation(eff, "opacity");
@@ -239,19 +239,19 @@ void Share::on_download_clicked() {
       td = nullptr;
     });
     connect(td, &TranslationDownloader::downloadStarted, this,
-            [=](QString status) { showStatus(status); });
+            [=](const QString &status) { showStatus(status); });
     connect(td, &TranslationDownloader::downloadError, this,
-            [=](QString status) {
+            [=](const QString &status) {
               showStatus(status);
               ui->download->setEnabled(true);
             });
     connect(td, &TranslationDownloader::downloadFinished, this,
-            [=](QString status) { showStatus(status); });
+            [=](const QString &status) { showStatus(status); });
     td->start();
   }
 }
 
-void Share::concat(QString currentDownloadDir) {
+void Share::concat(const QString &currentDownloadDir) {
   // get path
   QString translation = ui->translation->toPlainText();
   QString path =
@@ -261,7 +261,7 @@ void Share::concat(QString currentDownloadDir) {
           .toString();
   QString fileName = QFileDialog::getSaveFileName(
       this, tr("Save Audio File"),
-      path + "/" + getFileNameFromString(translation) + ".mp3",
+      path + QDir::separator() + getFileNameFromString(translation) + ".mp3",
       tr("Audio Files (*.mp3)"));
   if (!fileName.isEmpty()) {
 

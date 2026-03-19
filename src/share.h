@@ -21,8 +21,8 @@ public:
   ~Share();
 
 public slots:
-  void setTranslation(QString translation, QString uuid,
-                      QString langCode = QString());
+  void setTranslation(const QString &translation, const QString &uuid,
+                      const QString &langCode = QString());
 private slots:
   void on_text_clicked();
   void on_email_clicked();
@@ -30,10 +30,10 @@ private slots:
   void on_download_clicked();
   void ffmpeg_finished(int k);
 
-  static QString getFileNameFromString(QString string);
-  void showStatus(QString message);
-  bool saveFile(QString filename);
-  void concat(QString currentDownloadDir);
+  static QString getFileNameFromString(const QString &string);
+  void showStatus(const QString &message);
+  bool saveFile(const QString &filename);
+  void concat(const QString &currentDownloadDir);
 
 private:
   Ui::Share *ui;
