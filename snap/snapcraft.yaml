@@ -31,7 +31,7 @@ apps:
     environment:
       IS_SNAP: '1'
       PATH: "$SNAP/ffmpeg-platform/usr/bin:$PATH"
-      LD_LIBRARY_PATH: "$SNAP/ffmpeg-platform/usr/lib/$SNAP_LAUNCHER_ARCH_TRIPLET:$SNAP/ffmpeg-platform/usr/lib/x86_64-linux-gnu:$SNAP/ffmpeg-platform/usr/lib/aarch64-linux-gnu:$LD_LIBRARY_PATH"
+      LD_LIBRARY_PATH: "$SNAP/ffmpeg-platform/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR:$LD_LIBRARY_PATH"
       QT_MEDIA_BACKEND: ffmpeg
     plugs:
       - home
@@ -43,8 +43,6 @@ apps:
       - alsa
       - desktop
       - desktop-legacy
-      - ffmpeg-2404
-
 
 parts:
   glate:
