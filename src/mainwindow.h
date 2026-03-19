@@ -80,6 +80,7 @@ private slots:
   void setPlayButtonState(const QString &buttonName, const QIcon &icon,
                           const QString &toolTip);
   QString activePlayButtonName() const;
+  bool retryCurrentTtsChunkWithFallback();
 
 private:
   Ui::MainWindow *ui;

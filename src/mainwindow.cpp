@@ -10,6 +10,7 @@
 
 namespace {
 constexpr int kMaxTtsChunkLength = 1400;
+constexpr int kFallbackTtsChunkLength = 700;
 constexpr auto kPlay1IdleTooltip = "Play source text";
 constexpr auto kPlay2IdleTooltip = "Play translation";
 constexpr auto kPreparingTooltip = "Preparing audio...";
@@ -674,6 +675,32 @@ void MainWindow::resetPlayIcons() {
                      kPlay2IdleTooltip);
 }
 
+bool MainWindow::retryCurrentTtsChunkWithFallback() {
+  if (!m_ttsSessionActive || m_ttsCurrentIndex < 0 ||
+      m_ttsCurrentIndex >= m_ttsChunks.size()) {
+    return false;
+  }
+
+  const QString currentChunk = m_ttsChunks.at(m_ttsCurrentIndex);
+  if (currentChunk.size() <= kFallbackTtsChunkLength) {
+    return false;
+  }
+
+  QStringList fallbackChunks;
+  if (!utils::splitString(currentChunk, kFallbackTtsChunkLength,
+                          fallbackChunks) ||
+      fallbackChunks.isEmpty()) {
+    return false;
+  }
+
+  m_ttsChunks.removeAt(m_ttsCurrentIndex);
+  for (int i = fallbackChunks.size() - 1; i >= 0; --i) {
+    m_ttsChunks.insert(m_ttsCurrentIndex, fallbackChunks.at(i));
+  }
+
+  return true;
+}
+
 void MainWindow::stopTtsSession(bool stopPlayer) {
   if (m_ttsReply != nullptr) {
     m_ttsReply->abort();
@@ -769,6 +796,12 @@ void MainWindow::downloadCurrentTtsChunk() {
                               ? QString("HTTP %1").arg(statusCode)
                               : reply->errorString();
       reply->deleteLater();
+
+      if (retryCurrentTtsChunkWithFallback()) {
+        downloadCurrentTtsChunk();
+        return;
+      }
+
       showError("Unable to download TTS audio: " + err);
       stopTtsSession(false);
       return;
@@ -777,6 +810,11 @@ void MainWindow::downloadCurrentTtsChunk() {
     const QByteArray data = reply->readAll();
     reply->deleteLater();
     if (data.isEmpty()) {
+      if (retryCurrentTtsChunkWithFallback()) {
+        downloadCurrentTtsChunk();
+        return;
+      }
+
       showError("TTS service returned empty audio data.");
       stopTtsSession(false);
       return;
