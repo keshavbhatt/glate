@@ -11,7 +11,7 @@ SystemTrayManager::SystemTrayManager(QObject *parent) : QObject{parent} {
     m_showAction =
         new QAction(tr("Restore %1").arg(qApp->applicationName()), this);
     m_hideAction =
-        new QAction(tr("Minimize to Tray").arg(qApp->applicationName()), this);
+        new QAction(tr("Minimize to Tray"), this);
     m_quitAction = new QAction(tr("Quit"), this);
 
     m_trayMenu->addAction(m_showAction);
