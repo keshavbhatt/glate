@@ -11,6 +11,12 @@ icon: snap/gui/icon.png
 base: core24
 compression: lzo
 
+plugs:
+  ffmpeg-2404:
+    interface: content
+    target: $SNAP/ffmpeg-platform
+    default-provider: ffmpeg-2404
+
 platforms:
   amd64:
   arm64:
@@ -24,6 +30,8 @@ apps:
       - kde-neon-6
     environment:
       IS_SNAP: '1'
+      PATH: "$SNAP/ffmpeg-platform/usr/bin:$PATH"
+      QT_MEDIA_BACKEND: ffmpeg
     plugs:
       - home
       - network
@@ -31,6 +39,7 @@ apps:
       - x11
       - wayland
       - audio-playback
+      - alsa
       - desktop
       - desktop-legacy
 
@@ -45,7 +54,6 @@ parts:
       - pkg-config
       - libpulse-dev
     stage-packages:
-      - ffmpeg
       - libx11-6
       - libxcb1
       - libpulse0
