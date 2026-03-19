@@ -36,17 +36,19 @@ apps:
 
 parts:
   glate:
-    source: src
+    source: .
     plugin: cmake
     build-packages:
       - libx11-dev
       - libxcb1-dev
       - libx11-xcb-dev
       - pkg-config
+      - libpulse-dev
     stage-packages:
       - ffmpeg
       - libx11-6
       - libxcb1
+      - libpulse0
     cmake-parameters:
       - -DCMAKE_BUILD_TYPE=Release
       - -DCMAKE_INSTALL_PREFIX=/usr
