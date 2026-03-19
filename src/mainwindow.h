@@ -5,7 +5,10 @@
 #include <QMainWindow>
 #include <QAudioOutput>
 #include <QMediaPlayer>
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
 #include <QScrollBar>
+#include <QTemporaryDir>
 #include <QTextEdit>
 
 #include "controlbutton.h"
@@ -68,6 +71,12 @@ private slots:
   QString getLangCode(const QString &langName);
   static void saveByTransId(const QString &translationId, const QString &reply);
   void processTranslation(const QString &reply);
+  void startTtsSession(const QString &playerName, const QString &text,
+                       const QString &ttsLang, const QString &voiceGender);
+  void downloadCurrentTtsChunk();
+  void playCurrentTtsChunk();
+  void stopTtsSession(bool stopPlayer);
+  void resetPlayIcons();
 
 private:
   Ui::MainWindow *ui;
@@ -95,6 +104,16 @@ private:
   QStringList m_langName, m_langCode, m_supportedTts;
   QSettings m_settings;
   QList<QStringList> m_currentTranslationData;
+
+  QNetworkAccessManager *m_ttsNetwork = nullptr;
+  QNetworkReply *m_ttsReply = nullptr;
+  QTemporaryDir *m_ttsTempDir = nullptr;
+  QStringList m_ttsChunks;
+  QStringList m_ttsLocalFiles;
+  QString m_ttsLang;
+  QString m_ttsGender;
+  int m_ttsCurrentIndex = -1;
+  bool m_ttsSessionActive = false;
 };
 
 #endif // MAINWINDOW_H

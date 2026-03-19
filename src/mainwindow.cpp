@@ -1,9 +1,16 @@
 #include "mainwindow.h"
 
+#include <QFile>
+#include <QNetworkRequest>
 #include <QShortcut>
+#include <QUrlQuery>
 
 #include "ui_mainwindow.h"
 #include "utils.h"
+
+namespace {
+constexpr int kMaxTtsChunkLength = 180;
+}
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow) {
@@ -111,6 +118,7 @@ MainWindow::MainWindow(QWidget *parent)
 
   // init media player
   m_player = new QMediaPlayer(this);
+  m_ttsNetwork = new QNetworkAccessManager(this);
   auto audioOutput = new QAudioOutput(this);
   audioOutput->setVolume(1.0);
   m_player->setAudioOutput(audioOutput);
@@ -131,47 +139,23 @@ MainWindow::MainWindow(QWidget *parent)
   connect(m_player, &QMediaPlayer::errorOccurred, this,
           [=](QMediaPlayer::Error error, const QString &errorString) {
             Q_UNUSED(error);
-            Q_UNUSED(errorString);
-            m_playSelected = false;
-            m_selectedText.clear();
-            auto playBtn = this->findChild<QPushButton *>(
-                m_player->objectName().split("_").last());
-            if (playBtn != nullptr)
-              playBtn->setIcon(QIcon(":/icons/volume-up-line.png"));
-            showError(m_player->errorString());
+            stopTtsSession(false);
+            showError(errorString.isEmpty() ? m_player->errorString()
+                                            : errorString);
           });
 
   connect(m_player, &QMediaPlayer::mediaStatusChanged, this,
           [=](QMediaPlayer::MediaStatus mediastate) {
             if (mediastate == QMediaPlayer::EndOfMedia) {
-              const QStringList ttsQueue =
-                  m_player->property("tts_queue").toStringList();
-              int ttsIndex = m_player->property("tts_index").toInt();
-              const QString ttsLang = m_player->property("tts_lang").toString();
-              const QString ttsGender =
-                  m_player->property("tts_gender").toString();
-
-              if (!ttsQueue.isEmpty() && ttsIndex + 1 < ttsQueue.size()) {
-                ++ttsIndex;
-                m_player->setProperty("tts_index", ttsIndex);
-
-                QUrl url("https://www.google.com/speech-api/v1/synthesize");
-                QUrlQuery params;
-                params.addQueryItem("ie", "UTF-8");
-                params.addQueryItem("lang", ttsLang);
-                params.addQueryItem("gender", ttsGender);
-                params.addQueryItem("text", ttsQueue.at(ttsIndex));
-                url.setQuery(params);
-
-                m_player->setSource(url);
-                m_player->play();
+              if (m_ttsSessionActive) {
+                ++m_ttsCurrentIndex;
+                if (m_ttsCurrentIndex < m_ttsLocalFiles.size()) {
+                  playCurrentTtsChunk();
+                } else {
+                  stopTtsSession(false);
+                }
                 return;
               }
-
-              m_player->setProperty("tts_queue", QStringList());
-              m_player->setProperty("tts_index", -1);
-              m_player->setProperty("tts_lang", QString());
-              m_player->setProperty("tts_gender", QString());
             }
 
             auto playBtn = this->findChild<QPushButton *>(
@@ -451,7 +435,10 @@ void MainWindow::setStyle(const QString &fname) {
   styleSheet.close();
 }
 
-MainWindow::~MainWindow() { delete ui; }
+MainWindow::~MainWindow() {
+  stopTtsSession(true);
+  delete ui;
+}
 
 void MainWindow::translate_clicked() {
   // clear processor vars
@@ -595,6 +582,8 @@ void MainWindow::showError(const QString &message) {
 }
 
 void MainWindow::on_clear_clicked() {
+  stopTtsSession(true);
+
   ui->src1->clear();
   ui->src2->clear();
 
@@ -648,6 +637,178 @@ void MainWindow::on_lang2_currentIndexChanged(int index) {
                           " to " + ui->lang2->itemText(index));
 }
 
+void MainWindow::resetPlayIcons() {
+  ui->play1->setIcon(QIcon(":/icons/volume-up-line.png"));
+  ui->play2->setIcon(QIcon(":/icons/volume-up-line.png"));
+}
+
+void MainWindow::stopTtsSession(bool stopPlayer) {
+  if (m_ttsReply != nullptr) {
+    m_ttsReply->abort();
+    m_ttsReply->deleteLater();
+    m_ttsReply = nullptr;
+  }
+
+  if (stopPlayer && m_player->playbackState() != QMediaPlayer::StoppedState) {
+    m_player->stop();
+  }
+
+  m_ttsSessionActive = false;
+  m_ttsChunks.clear();
+  m_ttsLocalFiles.clear();
+  m_ttsLang.clear();
+  m_ttsGender.clear();
+  m_ttsCurrentIndex = -1;
+  m_playSelected = false;
+  m_selectedText.clear();
+  resetPlayIcons();
+
+  if (m_ttsTempDir != nullptr) {
+    delete m_ttsTempDir;
+    m_ttsTempDir = nullptr;
+  }
+}
+
+void MainWindow::playCurrentTtsChunk() {
+  if (!m_ttsSessionActive || m_ttsCurrentIndex < 0 ||
+      m_ttsCurrentIndex >= m_ttsLocalFiles.size()) {
+    return;
+  }
+
+  const QString filePath = m_ttsLocalFiles.at(m_ttsCurrentIndex);
+  if (filePath.isEmpty() || !QFile::exists(filePath)) {
+    showError("Unable to play downloaded TTS audio chunk.");
+    stopTtsSession(false);
+    return;
+  }
+
+  m_player->setSource(QUrl::fromLocalFile(filePath));
+  m_player->play();
+}
+
+void MainWindow::downloadCurrentTtsChunk() {
+  if (!m_ttsSessionActive || m_ttsCurrentIndex < 0 ||
+      m_ttsCurrentIndex >= m_ttsChunks.size()) {
+    stopTtsSession(false);
+    return;
+  }
+
+  if (m_ttsTempDir == nullptr) {
+    m_ttsTempDir = new QTemporaryDir();
+    if (!m_ttsTempDir->isValid()) {
+      showError("Unable to create temporary directory for TTS audio.");
+      stopTtsSession(false);
+      return;
+    }
+  }
+
+  QUrl url("https://www.google.com/speech-api/v1/synthesize");
+  QUrlQuery params;
+  params.addQueryItem("ie", "UTF-8");
+  params.addQueryItem("lang", m_ttsLang);
+  params.addQueryItem("gender", m_ttsGender);
+  params.addQueryItem("text", m_ttsChunks.at(m_ttsCurrentIndex));
+  url.setQuery(params);
+
+  QNetworkRequest request(url);
+  request.setHeader(QNetworkRequest::UserAgentHeader,
+                    "Mozilla/5.0 (X11; Linux x86_64) Glate/4.0");
+
+  QNetworkReply *reply = m_ttsNetwork->get(request);
+  m_ttsReply = reply;
+
+  connect(reply, &QNetworkReply::finished, this, [this, reply]() {
+    if (reply != m_ttsReply) {
+      return;
+    }
+
+    m_ttsReply = nullptr;
+
+    if (!m_ttsSessionActive) {
+      reply->deleteLater();
+      return;
+    }
+
+    const int statusCode =
+        reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+    if (reply->error() != QNetworkReply::NoError || statusCode < 200 ||
+        statusCode >= 300) {
+      const QString err = reply->errorString().isEmpty()
+                              ? QString("HTTP %1").arg(statusCode)
+                              : reply->errorString();
+      reply->deleteLater();
+      showError("Unable to download TTS audio: " + err);
+      stopTtsSession(false);
+      return;
+    }
+
+    const QByteArray data = reply->readAll();
+    reply->deleteLater();
+    if (data.isEmpty()) {
+      showError("TTS service returned empty audio data.");
+      stopTtsSession(false);
+      return;
+    }
+
+    const QString filePath =
+        m_ttsTempDir->filePath(QString("tts_%1.mp3")
+                                   .arg(m_ttsCurrentIndex, 4, 10, QChar('0')));
+    QFile file(filePath);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+      showError("Unable to store downloaded TTS audio chunk.");
+      stopTtsSession(false);
+      return;
+    }
+    file.write(data);
+    file.close();
+
+    while (m_ttsLocalFiles.size() <= m_ttsCurrentIndex) {
+      m_ttsLocalFiles.append(QString());
+    }
+    m_ttsLocalFiles[m_ttsCurrentIndex] = filePath;
+
+    // Pre-download all chunks first to avoid network-induced playback gaps.
+    ++m_ttsCurrentIndex;
+    if (m_ttsCurrentIndex < m_ttsChunks.size()) {
+      downloadCurrentTtsChunk();
+      return;
+    }
+
+    if (!m_ttsLocalFiles.isEmpty()) {
+      m_ttsCurrentIndex = 0;
+      playCurrentTtsChunk();
+    } else {
+      stopTtsSession(false);
+    }
+  });
+}
+
+void MainWindow::startTtsSession(const QString &playerName, const QString &text,
+                                 const QString &ttsLang,
+                                 const QString &voiceGender) {
+  stopTtsSession(true);
+
+  QStringList chunks;
+  if (!utils::splitString(text, kMaxTtsChunkLength, chunks) || chunks.isEmpty()) {
+    chunks = QStringList{text};
+  }
+
+  m_ttsChunks = chunks;
+  m_ttsLang = ttsLang;
+  m_ttsGender = voiceGender;
+  m_ttsCurrentIndex = 0;
+  m_ttsSessionActive = true;
+  m_player->setObjectName("player_" + playerName);
+
+  if (playerName == "play1") {
+    ui->play1->setIcon(QIcon(":/icons/loader-2-fill.png"));
+  } else {
+    ui->play2->setIcon(QIcon(":/icons/loader-2-fill.png"));
+  }
+
+  downloadCurrentTtsChunk();
+}
+
 void MainWindow::on_play2_clicked() {
   const int voiceIdx = m_settings.value("voiceGender", 0).toInt();
   const auto voices = utils::availableVoices();
@@ -677,33 +838,9 @@ void MainWindow::on_play2_clicked() {
     QString text = ui->src2->toPlainText();
     if (m_playSelected)
       text = m_selectedText;
-
-    QStringList src2Parts;
-    if (!utils::splitString(text, 1500, src2Parts) || src2Parts.isEmpty()) {
-      src2Parts = QStringList{text};
-    }
-
-    m_player->setProperty("tts_queue", src2Parts);
-    m_player->setProperty("tts_index", 0);
-    m_player->setProperty("tts_lang", ttsLang);
-    m_player->setProperty("tts_gender", voiceGender);
-
-    QUrl url("https://www.google.com/speech-api/v1/synthesize");
-    QUrlQuery params;
-    params.addQueryItem("ie", "UTF-8");
-    params.addQueryItem("lang", ttsLang);
-    params.addQueryItem("gender", voiceGender);
-    params.addQueryItem("text", src2Parts.first());
-    url.setQuery(params);
-    m_player->setSource(url);
-    m_player->play();
-    ui->play2->setIcon(QIcon(":/icons/loader-2-fill.png"));
+    startTtsSession("play2", text, ttsLang, voiceGender);
   } else {
-    m_player->blockSignals(true);
-    m_player->stop();
-    ui->play1->setIcon(QIcon(":/icons/volume-up-line.png"));
-    ui->play2->setIcon(QIcon(":/icons/volume-up-line.png"));
-    m_player->blockSignals(false);
+    stopTtsSession(true);
   }
 
   if (player1Playing) {
@@ -740,33 +877,9 @@ void MainWindow::on_play1_clicked() {
     QString text = ui->src1->toPlainText();
     if (m_playSelected)
       text = m_selectedText;
-
-    QStringList src1Parts;
-    if (!utils::splitString(text, 1500, src1Parts) || src1Parts.isEmpty()) {
-      src1Parts = QStringList{text};
-    }
-
-    m_player->setProperty("tts_queue", src1Parts);
-    m_player->setProperty("tts_index", 0);
-    m_player->setProperty("tts_lang", ttsLang);
-    m_player->setProperty("tts_gender", voiceGender);
-
-    QUrl url("https://www.google.com/speech-api/v1/synthesize");
-    QUrlQuery params;
-    params.addQueryItem("ie", "UTF-8");
-    params.addQueryItem("lang", ttsLang);
-    params.addQueryItem("gender", voiceGender);
-    params.addQueryItem("text", src1Parts.first());
-    url.setQuery(params);
-    m_player->setSource(url);
-    m_player->play();
-    ui->play1->setIcon(QIcon(":/icons/loader-2-fill.png"));
+    startTtsSession("play1", text, ttsLang, voiceGender);
   } else {
-    m_player->blockSignals(true);
-    m_player->stop();
-    ui->play1->setIcon(QIcon(":/icons/volume-up-line.png"));
-    ui->play2->setIcon(QIcon(":/icons/volume-up-line.png"));
-    m_player->blockSignals(false);
+    stopTtsSession(true);
   }
 
   if (player2Playing) {
