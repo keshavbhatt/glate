@@ -91,7 +91,7 @@ target_include_directories(glate PRIVATE
 
 target_compile_definitions(glate PRIVATE
     QT_DEPRECATED_WARNINGS
-    $<$<CONFIG:Release>:QT_NO_DEBUG_OUTPUT>
+    $<$<NOT:$<CONFIG:Debug>>:QT_NO_DEBUG_OUTPUT>
 )
 
 target_link_libraries(glate PRIVATE
