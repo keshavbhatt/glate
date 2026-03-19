@@ -10,6 +10,11 @@
 
 namespace {
 constexpr int kMaxTtsChunkLength = 180;
+constexpr auto kPlay1IdleTooltip = "Play source text";
+constexpr auto kPlay2IdleTooltip = "Play translation";
+constexpr auto kPreparingTooltip = "Preparing audio...";
+constexpr auto kBufferingTooltip = "Buffering audio...";
+constexpr auto kStopTooltip = "Stop playback";
 }
 
 MainWindow::MainWindow(QWidget *parent)
@@ -124,15 +129,20 @@ MainWindow::MainWindow(QWidget *parent)
   m_player->setAudioOutput(audioOutput);
   connect(m_player, &QMediaPlayer::playbackStateChanged, this,
           [=](QMediaPlayer::PlaybackState state) {
-            auto playBtn = this->findChild<QPushButton *>(
-                m_player->objectName().split("_").last());
-            if (playBtn != nullptr && state == QMediaPlayer::StoppedState) {
-              playBtn->setIcon(QIcon(":/icons/volume-up-line.png"));
+            const QString activeButton = activePlayButtonName();
+            if (!activeButton.isEmpty() &&
+                state == QMediaPlayer::StoppedState) {
+              setPlayButtonState(activeButton, QIcon(":/icons/volume-up-line.png"),
+                                 activeButton == "play1"
+                                     ? kPlay1IdleTooltip
+                                     : kPlay2IdleTooltip);
               m_playSelected = false;
               m_selectedText.clear();
             }
-            if (playBtn != nullptr && state == QMediaPlayer::PlayingState) {
-              playBtn->setIcon(QIcon(":/icons/stop-line.png"));
+            if (!activeButton.isEmpty() &&
+                state == QMediaPlayer::PlayingState) {
+              setPlayButtonState(activeButton, QIcon(":/icons/stop-line.png"),
+                                 kStopTooltip);
             }
           });
 
@@ -158,18 +168,22 @@ MainWindow::MainWindow(QWidget *parent)
               }
             }
 
-            auto playBtn = this->findChild<QPushButton *>(
-                m_player->objectName().split("_").last());
-            if (playBtn != nullptr &&
+            const QString activeButton = activePlayButtonName();
+            if (!activeButton.isEmpty() &&
                 (mediastate == QMediaPlayer::LoadingMedia ||
                  mediastate == QMediaPlayer::BufferingMedia)) {
-              playBtn->setIcon(QIcon(":/icons/loader-2-fill.png"));
+              setPlayButtonState(activeButton,
+                                 QIcon(":/icons/loader-2-fill.png"),
+                                 kBufferingTooltip);
             }
-            if (playBtn != nullptr &&
+            if (!activeButton.isEmpty() &&
                 (mediastate == QMediaPlayer::BufferedMedia)) {
-              playBtn->setIcon(QIcon(":/icons/stop-line.png"));
+              setPlayButtonState(activeButton, QIcon(":/icons/stop-line.png"),
+                                 kStopTooltip);
             }
           });
+
+  resetPlayIcons();
 
   // load src1
   ui->counter->setText("5000/5000");
@@ -637,9 +651,27 @@ void MainWindow::on_lang2_currentIndexChanged(int index) {
                           " to " + ui->lang2->itemText(index));
 }
 
+QString MainWindow::activePlayButtonName() const {
+  const QStringList parts = m_player->objectName().split("_");
+  return parts.isEmpty() ? QString() : parts.last();
+}
+
+void MainWindow::setPlayButtonState(const QString &buttonName, const QIcon &icon,
+                                    const QString &toolTip) {
+  if (buttonName == "play1") {
+    ui->play1->setIcon(icon);
+    ui->play1->setToolTip(toolTip);
+  } else if (buttonName == "play2") {
+    ui->play2->setIcon(icon);
+    ui->play2->setToolTip(toolTip);
+  }
+}
+
 void MainWindow::resetPlayIcons() {
-  ui->play1->setIcon(QIcon(":/icons/volume-up-line.png"));
-  ui->play2->setIcon(QIcon(":/icons/volume-up-line.png"));
+  setPlayButtonState("play1", QIcon(":/icons/volume-up-line.png"),
+                     kPlay1IdleTooltip);
+  setPlayButtonState("play2", QIcon(":/icons/volume-up-line.png"),
+                     kPlay2IdleTooltip);
 }
 
 void MainWindow::stopTtsSession(bool stopPlayer) {
@@ -801,9 +833,15 @@ void MainWindow::startTtsSession(const QString &playerName, const QString &text,
   m_player->setObjectName("player_" + playerName);
 
   if (playerName == "play1") {
-    ui->play1->setIcon(QIcon(":/icons/loader-2-fill.png"));
+    setPlayButtonState("play1", QIcon(":/icons/loader-2-fill.png"),
+                       kPreparingTooltip);
+    setPlayButtonState("play2", QIcon(":/icons/volume-up-line.png"),
+                       kPlay2IdleTooltip);
   } else {
-    ui->play2->setIcon(QIcon(":/icons/loader-2-fill.png"));
+    setPlayButtonState("play2", QIcon(":/icons/loader-2-fill.png"),
+                       kPreparingTooltip);
+    setPlayButtonState("play1", QIcon(":/icons/volume-up-line.png"),
+                       kPlay1IdleTooltip);
   }
 
   downloadCurrentTtsChunk();
@@ -834,7 +872,6 @@ void MainWindow::on_play2_clicked() {
                 "Language.");
       return;
     }
-    m_player->setObjectName("player_play2");
     QString text = ui->src2->toPlainText();
     if (m_playSelected)
       text = m_selectedText;
@@ -873,7 +910,6 @@ void MainWindow::on_play1_clicked() {
                 "Language.");
       return;
     }
-    m_player->setObjectName("player_play1");
     QString text = ui->src1->toPlainText();
     if (m_playSelected)
       text = m_selectedText;

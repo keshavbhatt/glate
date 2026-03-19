@@ -77,6 +77,9 @@ private slots:
   void playCurrentTtsChunk();
   void stopTtsSession(bool stopPlayer);
   void resetPlayIcons();
+  void setPlayButtonState(const QString &buttonName, const QIcon &icon,
+                          const QString &toolTip);
+  QString activePlayButtonName() const;
 
 private:
   Ui::MainWindow *ui;
