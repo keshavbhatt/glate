@@ -885,80 +885,68 @@ void MainWindow::startTtsSession(const QString &playerName, const QString &text,
   downloadCurrentTtsChunk();
 }
 
-void MainWindow::on_play2_clicked() {
+bool MainWindow::resolveTtsVoiceConfig(const QString &baseLang, QString &ttsLang,
+                                       QString &ttsCheckLang,
+                                       QString &voiceGender) const {
   const int voiceIdx = m_settings.value("voiceGender", 0).toInt();
   const auto voices = utils::availableVoices();
   const VoiceOption &voiceConf =
       voiceIdx < voices.size() ? voices.at(voiceIdx) : voices.first();
-  const QString voiceGender = voiceConf.gender;
-  const QString ttsLang = voiceConf.langOverride.isEmpty()
-                              ? getTransLang()
-                              : voiceConf.langOverride;
-  // For support check use base lang (e.g. "en" from "en-GB")
-  const QString ttsCheckLang = voiceConf.langOverride.isEmpty()
-                                   ? getTransLang()
-                                   : voiceConf.langOverride.split('-').first();
 
-  bool player1Playing =
-      m_player->objectName().split("_").last() == "play1" &&
+  voiceGender = voiceConf.gender;
+  ttsLang = voiceConf.langOverride.isEmpty() ? baseLang : voiceConf.langOverride;
+  ttsCheckLang =
+      voiceConf.langOverride.isEmpty() ? baseLang
+                                       : voiceConf.langOverride.split('-').first();
+  return true;
+}
+
+void MainWindow::toggleOrStartTts(const QString &buttonName,
+                                  const QString &baseLang,
+                                  const QString &displayLang,
+                                  const QString &text) {
+  const QString activeButton = activePlayButtonName();
+  const bool isPlaying =
       m_player->playbackState() == QMediaPlayer::PlayingState;
 
-  if (m_player->playbackState() != QMediaPlayer::PlayingState) {
-    if (!m_supportedTts.contains(ttsCheckLang, Qt::CaseInsensitive)) {
-      showError("Selected language '" + getTransLang() +
-                "' is not supported by TTS Engine.\nPlease choose different "
-                "Language.");
-      return;
-    }
-    QString text = ui->src2->toPlainText();
-    if (m_playSelected)
-      text = m_selectedText;
-    startTtsSession("play2", text, ttsLang, voiceGender);
-  } else {
+  if (isPlaying && activeButton == buttonName) {
+    stopTtsSession(true);
+    return;
+  }
+
+  if (isPlaying && activeButton != buttonName) {
     stopTtsSession(true);
   }
 
-  if (player1Playing) {
-    on_play2_clicked();
+  QString ttsLang;
+  QString ttsCheckLang;
+  QString voiceGender;
+  resolveTtsVoiceConfig(baseLang, ttsLang, ttsCheckLang, voiceGender);
+
+  if (!m_supportedTts.contains(ttsCheckLang, Qt::CaseInsensitive)) {
+    showError("Selected language '" + displayLang +
+              "' is not supported by TTS Engine.\nPlease choose different "
+              "Language.");
+    return;
   }
+
+  startTtsSession(buttonName, text, ttsLang, voiceGender);
+}
+
+void MainWindow::on_play2_clicked() {
+  QString text = ui->src2->toPlainText();
+  if (m_playSelected)
+    text = m_selectedText;
+
+  toggleOrStartTts("play2", getTransLang(), getTransLang(), text);
 }
 
 void MainWindow::on_play1_clicked() {
-  const int voiceIdx = m_settings.value("voiceGender", 0).toInt();
-  const auto voices = utils::availableVoices();
-  const VoiceOption &voiceConf =
-      voiceIdx < voices.size() ? voices.at(voiceIdx) : voices.first();
-  const QString voiceGender = voiceConf.gender;
-  const QString ttsLang = voiceConf.langOverride.isEmpty()
-                              ? getSourceLang()
-                              : voiceConf.langOverride;
-  // For support check use base lang (e.g. "en" from "en-GB")
-  const QString ttsCheckLang = voiceConf.langOverride.isEmpty()
-                                   ? getSourceLang()
-                                   : voiceConf.langOverride.split('-').first();
+  QString text = ui->src1->toPlainText();
+  if (m_playSelected)
+    text = m_selectedText;
 
-  bool player2Playing =
-      m_player->objectName().split("_").last() == "play2" &&
-      m_player->playbackState() == QMediaPlayer::PlayingState;
-
-  if (m_player->playbackState() != QMediaPlayer::PlayingState) {
-    if (!m_supportedTts.contains(ttsCheckLang, Qt::CaseInsensitive)) {
-      showError("Selected language '" + getSourceLang() +
-                "' is not supported by TTS Engine.\nPlease choose different "
-                "Language.");
-      return;
-    }
-    QString text = ui->src1->toPlainText();
-    if (m_playSelected)
-      text = m_selectedText;
-    startTtsSession("play1", text, ttsLang, voiceGender);
-  } else {
-    stopTtsSession(true);
-  }
-
-  if (player2Playing) {
-    on_play1_clicked();
-  }
+  toggleOrStartTts("play1", getSourceLang(), getSourceLang(), text);
 }
 
 void MainWindow::on_src1_textChanged() {

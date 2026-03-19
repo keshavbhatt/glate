@@ -81,6 +81,11 @@ private slots:
                           const QString &toolTip);
   QString activePlayButtonName() const;
   bool retryCurrentTtsChunkWithFallback();
+  bool resolveTtsVoiceConfig(const QString &baseLang, QString &ttsLang,
+                             QString &ttsCheckLang,
+                             QString &voiceGender) const;
+  void toggleOrStartTts(const QString &buttonName, const QString &baseLang,
+                        const QString &displayLang, const QString &text);
 
 private:
   Ui::MainWindow *ui;
