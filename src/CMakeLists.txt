@@ -56,6 +56,8 @@ qt_add_executable(glate
     slider.h
     systemtraymanager.cpp
     systemtraymanager.h
+    ttsdownloader.cpp
+    ttsdownloader.h
     translationdownloader.cpp
     translationdownloader.h
     utils.cpp

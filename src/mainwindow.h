@@ -5,10 +5,7 @@
 #include <QMainWindow>
 #include <QAudioOutput>
 #include <QMediaPlayer>
-#include <QNetworkAccessManager>
-#include <QNetworkReply>
 #include <QScrollBar>
-#include <QTemporaryDir>
 #include <QTextEdit>
 
 #include "controlbutton.h"
@@ -20,6 +17,7 @@
 #include "share.h"
 #include "slider.h"
 #include "systemtraymanager.h"
+#include "ttsdownloader.h"
 #include "ui_textoptionform.h"
 #include "waitingspinnerwidget.h"
 
@@ -73,14 +71,12 @@ private slots:
   void processTranslation(const QString &reply);
   void startTtsSession(const QString &playerName, const QString &text,
                        const QString &ttsLang, const QString &voiceGender);
-  void downloadCurrentTtsChunk();
   void playCurrentTtsChunk();
   void stopTtsSession(bool stopPlayer);
   void resetPlayIcons();
   void setPlayButtonState(const QString &buttonName, const QIcon &icon,
                           const QString &toolTip);
   QString activePlayButtonName() const;
-  bool retryCurrentTtsChunkWithFallback();
   bool resolveTtsVoiceConfig(const QString &baseLang, QString &ttsLang,
                              QString &ttsCheckLang,
                              QString &voiceGender) const;
@@ -114,13 +110,8 @@ private:
   QSettings m_settings;
   QList<QStringList> m_currentTranslationData;
 
-  QNetworkAccessManager *m_ttsNetwork = nullptr;
-  QNetworkReply *m_ttsReply = nullptr;
-  QTemporaryDir *m_ttsTempDir = nullptr;
-  QStringList m_ttsChunks;
+  TtsDownloader *m_ttsDownloader = nullptr;
   QStringList m_ttsLocalFiles;
-  QString m_ttsLang;
-  QString m_ttsGender;
   int m_ttsCurrentIndex = -1;
   bool m_ttsSessionActive = false;
 };

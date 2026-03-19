@@ -1,7 +1,7 @@
 #ifndef SHARE_H
 #define SHARE_H
 
-#include "translationdownloader.h"
+#include "ttsdownloader.h"
 
 #include <QDesktopServices>
 #include <QNetworkAccessManager>
@@ -33,17 +33,17 @@ private slots:
   static QString getFileNameFromString(const QString &string);
   void showStatus(const QString &message);
   bool saveFile(const QString &filename);
-  void concat(const QString &currentDownloadDir);
+  void concat(const QStringList &audioFiles);
 
 private:
   Ui::Share *ui;
   QSettings settings;
   QProcess *ffmpeg = nullptr;
   QNetworkAccessManager *m_networkManager = nullptr;
+  TtsDownloader *m_ttsDownloader = nullptr;
   QString translationUUID;
   QString translationLangCode;
-  TranslationDownloader *td = nullptr;
-  QString cacheDirToDelete;
+  QStringList m_downloadedAudioFiles;
 };
 
 #endif // SHARE_H

@@ -6,11 +6,13 @@
 #include <QFileDialog>
 #include <QGraphicsOpacityEffect>
 #include <QMessageBox>
+#include <QPropertyAnimation>
 
 Share::Share(QWidget *parent) : QWidget(parent), ui(new Ui::Share) {
   ui->setupUi(this);
   ffmpeg = new QProcess(this);
   m_networkManager = new QNetworkAccessManager(this);
+  m_ttsDownloader = new TtsDownloader(this);
 
   // Populate voice combo from central voice list
   ui->voiceGender->clear();
@@ -25,6 +27,29 @@ Share::Share(QWidget *parent) : QWidget(parent), ui(new Ui::Share) {
           });
   connect(this->ffmpeg, SIGNAL(finished(int)), this,
           SLOT(ffmpeg_finished(int)));
+
+  connect(m_ttsDownloader, &TtsDownloader::progress, this,
+          [=](const QString &status) {
+            showStatus("<span style='color:green'>Share: </span>" +
+                       status.toHtmlEscaped());
+          });
+  connect(m_ttsDownloader, &TtsDownloader::finished, this,
+          [=](const QStringList &audioFiles) {
+            m_downloadedAudioFiles = audioFiles;
+            if (m_downloadedAudioFiles.isEmpty()) {
+              showStatus("<span style='color:red'>Share: </span>No audio chunks downloaded.");
+              ui->download->setEnabled(true);
+              return;
+            }
+            showStatus("<span style='color:green'>Share: </span>Voice download finished...");
+            concat(m_downloadedAudioFiles);
+          });
+  connect(m_ttsDownloader, &TtsDownloader::failed, this,
+          [=](const QString &error) {
+            showStatus("<span style='color:red'>Share: </span>" +
+                       error.toHtmlEscaped());
+            ui->download->setEnabled(true);
+          });
 }
 
 void Share::setTranslation(const QString &translation, const QString &uuid, const QString &langCode) {
@@ -206,52 +231,12 @@ void Share::on_download_clicked() {
           : voiceConf.langOverride;
   showStatus("<span style='color:green'>Share: </span>Preparing " +
              voiceConf.displayName + " voice download...");
-  QStringList src1Parts;
-  QList<QUrl> urls;
-  if (utils::splitString(text, 1400, src1Parts)) {
-    qDebug() << src1Parts;
-    for (int i = 0; i < src1Parts.count(); i++) {
-      QUrl url("https://www.google.com/speech-api/v1/synthesize");
-      QUrlQuery params;
-      params.addQueryItem("ie", "UTF-8");
-      params.addQueryItem("lang", ttsLang);
-      params.addQueryItem("gender", selectedGender);
-      params.addQueryItem("text",
-                          QUrl::toPercentEncoding(src1Parts.at(i).toUtf8()));
-      url.setQuery(params);
-      urls.append(url);
-    }
-  }
-
-  if (td != nullptr) {
-    td->disconnect();
-    td->deleteLater();
-    td = nullptr;
-  } else {
-    td = new TranslationDownloader(this, urls, translationUUID);
-    ui->download->setEnabled(false);
-    connect(td, &TranslationDownloader::downloadComplete, this, [=]() {
-      qDebug() << "DOWNLOAD FINISHED";
-      showStatus("Voice download finished...");
-      showStatus("Prepearing output file...");
-      concat(td->currentDownloadDir);
-      td->deleteLater();
-      td = nullptr;
-    });
-    connect(td, &TranslationDownloader::downloadStarted, this,
-            [=](const QString &status) { showStatus(status); });
-    connect(td, &TranslationDownloader::downloadError, this,
-            [=](const QString &status) {
-              showStatus(status);
-              ui->download->setEnabled(true);
-            });
-    connect(td, &TranslationDownloader::downloadFinished, this,
-            [=](const QString &status) { showStatus(status); });
-    td->start();
-  }
+  ui->download->setEnabled(false);
+  m_downloadedAudioFiles.clear();
+  m_ttsDownloader->start(text, ttsLang, selectedGender);
 }
 
-void Share::concat(const QString &currentDownloadDir) {
+void Share::concat(const QStringList &audioFiles) {
   // get path
   QString translation = ui->translation->toPlainText();
   QString path =
@@ -270,18 +255,12 @@ void Share::concat(const QString &currentDownloadDir) {
     args << "-v"
          << "quiet"
          << "-stats";
-    QDir transDir(currentDownloadDir);
-    cacheDirToDelete =
-        currentDownloadDir; // save audio cahce dir for deletion after concat
-    transDir.setFilter(QDir::Files);
-    transDir.setSorting(QDir::Name);
-    QFileInfoList infoList = transDir.entryInfoList();
-    for (int i = 0; i < infoList.count(); i++) {
-      args << "-i" << infoList.at(i).filePath();
+    for (int i = 0; i < audioFiles.count(); i++) {
+      args << "-i" << audioFiles.at(i);
       complex += "[" + QString::number(i) + ":0]";
     }
     complex +=
-        "concat=n=" + QString::number(infoList.count()) + ":v=0:a=1[out]";
+        "concat=n=" + QString::number(audioFiles.count()) + ":v=0:a=1[out]";
     args << "-filter_complex" << complex << "-map"
          << "[out]" << fileName << "-y";
     // ffmpeg -v quiet -stats inputs -filter_complex
@@ -301,14 +280,19 @@ void Share::concat(const QString &currentDownloadDir) {
 
 void Share::ffmpeg_finished(int k) {
   if (k == 0) {
-    QString output = ffmpeg->readAll();
-    showStatus("<span style='color:green'>Share: </span>export finished.\n" +
-               output);
-    QDir d(cacheDirToDelete);
-    d.removeRecursively();
+    const QString output = QString::fromUtf8(ffmpeg->readAll()).trimmed();
+    const QString message = output.isEmpty()
+                                ? "<span style='color:green'>Share: </span>Export finished."
+                                : "<span style='color:green'>Share: </span>Export finished.<br>" +
+                                      output.toHtmlEscaped();
+    showStatus(message);
   } else {
-    showStatus("<span style='color:red'>" + ffmpeg->readAllStandardError() +
-               "</span><br>");
+    const QString err =
+        QString::fromUtf8(ffmpeg->readAllStandardError()).trimmed();
+    showStatus(err.isEmpty()
+                   ? "<span style='color:red'>Share: </span>Export failed."
+                   : "<span style='color:red'>Share: </span>" +
+                         err.toHtmlEscaped());
   }
   ui->download->setDisabled(false);
 }

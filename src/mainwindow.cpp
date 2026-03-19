@@ -9,8 +9,6 @@
 #include "utils.h"
 
 namespace {
-constexpr int kMaxTtsChunkLength = 1400;
-constexpr int kFallbackTtsChunkLength = 700;
 constexpr auto kPlay1IdleTooltip = "Play source text";
 constexpr auto kPlay2IdleTooltip = "Play translation";
 constexpr auto kPreparingTooltip = "Preparing audio...";
@@ -124,10 +122,38 @@ MainWindow::MainWindow(QWidget *parent)
 
   // init media player
   m_player = new QMediaPlayer(this);
-  m_ttsNetwork = new QNetworkAccessManager(this);
+  m_ttsDownloader = new TtsDownloader(this);
   auto audioOutput = new QAudioOutput(this);
   audioOutput->setVolume(1.0);
   m_player->setAudioOutput(audioOutput);
+
+  connect(m_ttsDownloader, &TtsDownloader::progress, this,
+          [=](const QString &status) {
+            const QString activeButton = activePlayButtonName();
+            if (!activeButton.isEmpty()) {
+              setPlayButtonState(activeButton,
+                                 QIcon(":/icons/loader-2-fill.png"), status);
+            }
+          });
+  connect(m_ttsDownloader, &TtsDownloader::finished, this,
+          [=](const QStringList &audioFiles) {
+            if (!m_ttsSessionActive) {
+              return;
+            }
+            m_ttsLocalFiles = audioFiles;
+            m_ttsCurrentIndex = 0;
+            if (m_ttsLocalFiles.isEmpty()) {
+              showError("TTS service returned no audio data.");
+              stopTtsSession(false);
+              return;
+            }
+            playCurrentTtsChunk();
+          });
+  connect(m_ttsDownloader, &TtsDownloader::failed, this,
+          [=](const QString &error) {
+            stopTtsSession(false);
+            showError(error);
+          });
   connect(m_player, &QMediaPlayer::playbackStateChanged, this,
           [=](QMediaPlayer::PlaybackState state) {
             const QString activeButton = activePlayButtonName();
@@ -675,37 +701,9 @@ void MainWindow::resetPlayIcons() {
                      kPlay2IdleTooltip);
 }
 
-bool MainWindow::retryCurrentTtsChunkWithFallback() {
-  if (!m_ttsSessionActive || m_ttsCurrentIndex < 0 ||
-      m_ttsCurrentIndex >= m_ttsChunks.size()) {
-    return false;
-  }
-
-  const QString currentChunk = m_ttsChunks.at(m_ttsCurrentIndex);
-  if (currentChunk.size() <= kFallbackTtsChunkLength) {
-    return false;
-  }
-
-  QStringList fallbackChunks;
-  if (!utils::splitString(currentChunk, kFallbackTtsChunkLength,
-                          fallbackChunks) ||
-      fallbackChunks.isEmpty()) {
-    return false;
-  }
-
-  m_ttsChunks.removeAt(m_ttsCurrentIndex);
-  for (int i = fallbackChunks.size() - 1; i >= 0; --i) {
-    m_ttsChunks.insert(m_ttsCurrentIndex, fallbackChunks.at(i));
-  }
-
-  return true;
-}
-
 void MainWindow::stopTtsSession(bool stopPlayer) {
-  if (m_ttsReply != nullptr) {
-    m_ttsReply->abort();
-    m_ttsReply->deleteLater();
-    m_ttsReply = nullptr;
+  if (m_ttsDownloader != nullptr) {
+    m_ttsDownloader->cancel();
   }
 
   if (stopPlayer && m_player->playbackState() != QMediaPlayer::StoppedState) {
@@ -713,19 +711,11 @@ void MainWindow::stopTtsSession(bool stopPlayer) {
   }
 
   m_ttsSessionActive = false;
-  m_ttsChunks.clear();
   m_ttsLocalFiles.clear();
-  m_ttsLang.clear();
-  m_ttsGender.clear();
   m_ttsCurrentIndex = -1;
   m_playSelected = false;
   m_selectedText.clear();
   resetPlayIcons();
-
-  if (m_ttsTempDir != nullptr) {
-    delete m_ttsTempDir;
-    m_ttsTempDir = nullptr;
-  }
 }
 
 void MainWindow::playCurrentTtsChunk() {
@@ -745,127 +735,12 @@ void MainWindow::playCurrentTtsChunk() {
   m_player->play();
 }
 
-void MainWindow::downloadCurrentTtsChunk() {
-  if (!m_ttsSessionActive || m_ttsCurrentIndex < 0 ||
-      m_ttsCurrentIndex >= m_ttsChunks.size()) {
-    stopTtsSession(false);
-    return;
-  }
-
-  if (m_ttsTempDir == nullptr) {
-    m_ttsTempDir = new QTemporaryDir();
-    if (!m_ttsTempDir->isValid()) {
-      showError("Unable to create temporary directory for TTS audio.");
-      stopTtsSession(false);
-      return;
-    }
-  }
-
-  QUrl url("https://www.google.com/speech-api/v1/synthesize");
-  QUrlQuery params;
-  params.addQueryItem("ie", "UTF-8");
-  params.addQueryItem("lang", m_ttsLang);
-  params.addQueryItem("gender", m_ttsGender);
-  params.addQueryItem("text", m_ttsChunks.at(m_ttsCurrentIndex));
-  url.setQuery(params);
-
-  QNetworkRequest request(url);
-  request.setHeader(QNetworkRequest::UserAgentHeader,
-                    "Mozilla/5.0 (X11; Linux x86_64) Glate/4.0");
-
-  QNetworkReply *reply = m_ttsNetwork->get(request);
-  m_ttsReply = reply;
-
-  connect(reply, &QNetworkReply::finished, this, [this, reply]() {
-    if (reply != m_ttsReply) {
-      return;
-    }
-
-    m_ttsReply = nullptr;
-
-    if (!m_ttsSessionActive) {
-      reply->deleteLater();
-      return;
-    }
-
-    const int statusCode =
-        reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
-    if (reply->error() != QNetworkReply::NoError || statusCode < 200 ||
-        statusCode >= 300) {
-      const QString err = reply->errorString().isEmpty()
-                              ? QString("HTTP %1").arg(statusCode)
-                              : reply->errorString();
-      reply->deleteLater();
-
-      if (retryCurrentTtsChunkWithFallback()) {
-        downloadCurrentTtsChunk();
-        return;
-      }
-
-      showError("Unable to download TTS audio: " + err);
-      stopTtsSession(false);
-      return;
-    }
-
-    const QByteArray data = reply->readAll();
-    reply->deleteLater();
-    if (data.isEmpty()) {
-      if (retryCurrentTtsChunkWithFallback()) {
-        downloadCurrentTtsChunk();
-        return;
-      }
-
-      showError("TTS service returned empty audio data.");
-      stopTtsSession(false);
-      return;
-    }
-
-    const QString filePath =
-        m_ttsTempDir->filePath(QString("tts_%1.mp3")
-                                   .arg(m_ttsCurrentIndex, 4, 10, QChar('0')));
-    QFile file(filePath);
-    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
-      showError("Unable to store downloaded TTS audio chunk.");
-      stopTtsSession(false);
-      return;
-    }
-    file.write(data);
-    file.close();
-
-    while (m_ttsLocalFiles.size() <= m_ttsCurrentIndex) {
-      m_ttsLocalFiles.append(QString());
-    }
-    m_ttsLocalFiles[m_ttsCurrentIndex] = filePath;
-
-    // Pre-download all chunks first to avoid network-induced playback gaps.
-    ++m_ttsCurrentIndex;
-    if (m_ttsCurrentIndex < m_ttsChunks.size()) {
-      downloadCurrentTtsChunk();
-      return;
-    }
-
-    if (!m_ttsLocalFiles.isEmpty()) {
-      m_ttsCurrentIndex = 0;
-      playCurrentTtsChunk();
-    } else {
-      stopTtsSession(false);
-    }
-  });
-}
-
 void MainWindow::startTtsSession(const QString &playerName, const QString &text,
                                  const QString &ttsLang,
                                  const QString &voiceGender) {
   stopTtsSession(true);
 
-  QStringList chunks;
-  if (!utils::splitString(text, kMaxTtsChunkLength, chunks) || chunks.isEmpty()) {
-    chunks = QStringList{text};
-  }
-
-  m_ttsChunks = chunks;
-  m_ttsLang = ttsLang;
-  m_ttsGender = voiceGender;
+  m_ttsLocalFiles.clear();
   m_ttsCurrentIndex = 0;
   m_ttsSessionActive = true;
   m_player->setObjectName("player_" + playerName);
@@ -882,7 +757,7 @@ void MainWindow::startTtsSession(const QString &playerName, const QString &text,
                        kPlay1IdleTooltip);
   }
 
-  downloadCurrentTtsChunk();
+  m_ttsDownloader->start(text, ttsLang, voiceGender);
 }
 
 bool MainWindow::resolveTtsVoiceConfig(const QString &baseLang, QString &ttsLang,
