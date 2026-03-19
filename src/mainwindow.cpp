@@ -9,7 +9,7 @@
 #include "utils.h"
 
 namespace {
-constexpr int kMaxTtsChunkLength = 180;
+constexpr int kMaxTtsChunkLength = 1400;
 constexpr auto kPlay1IdleTooltip = "Play source text";
 constexpr auto kPlay2IdleTooltip = "Play translation";
 constexpr auto kPreparingTooltip = "Preparing audio...";
