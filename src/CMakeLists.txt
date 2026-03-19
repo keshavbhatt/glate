@@ -58,8 +58,6 @@ qt_add_executable(glate
     systemtraymanager.h
     ttsdownloader.cpp
     ttsdownloader.h
-    translationdownloader.cpp
-    translationdownloader.h
     utils.cpp
     utils.h
     waitingspinnerwidget.cpp
